@@ -1,4 +1,4 @@
-import { Plant } from "@/types/plant";
+import { Plant, Weather } from "@/types/plant";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getWaterLevel, getHealthColor, shouldWater } from "@/lib/plantLogic";
@@ -7,12 +7,13 @@ import { Progress } from "@/components/ui/progress";
 
 interface PlantCardProps {
   plant: Plant;
+  weather: Weather | null;
   onClick: () => void;
 }
 
-export function PlantCard({ plant, onClick }: PlantCardProps) {
+export function PlantCard({ plant, weather, onClick }: PlantCardProps) {
   const waterLevel = getWaterLevel(plant);
-  const needsWater = shouldWater(plant);
+  const needsWater = shouldWater(plant, weather);
 
   return (
     <Card

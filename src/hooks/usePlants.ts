@@ -38,7 +38,14 @@ export function usePlants(weather: Weather | null) {
   }, [weather]);
 
   const addPlant = (plant: Plant) => {
-    setPlants((prev) => [...prev, plant]);
+    // Ensure new plant has all required fields
+    const completeP: Plant = {
+      ...plant,
+      wateringHistory: plant.wateringHistory || [],
+      createdAt: plant.createdAt || new Date().toISOString(),
+      totalWaterings: plant.totalWaterings || 0,
+    };
+    setPlants((prev) => [...prev, completeP]);
   };
 
   const updatePlant = (plantId: string, updates: Partial<Plant>) => {

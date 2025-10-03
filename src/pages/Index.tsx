@@ -10,17 +10,19 @@ import { Plant } from "@/types/plant";
 import { Plus, Leaf } from "lucide-react";
 import { toast } from "sonner";
 import { shouldWater } from "@/lib/plantLogic";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Index = () => {
   const { weather, loading: weatherLoading, refetch } = useWeather();
   const { plants, addPlant, updatePlant, removePlant } = usePlants(weather);
   const [selectedPlant, setSelectedPlant] = useState<Plant | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
   // Check for plants that need water and show notifications
   useEffect(() => {
-    if (plants.length > 0) {
-      const needWater = plants.filter(shouldWater);
+    if (plants.length > 0 && weather) {
+      const needWater = plants.filter((p) => shouldWater(p, weather));
       if (needWater.length > 0) {
         const names = needWater.map((p) => p.name).join(", ");
         toast.warning("Piante da annaffiare!", {
@@ -28,7 +30,12 @@ const Index = () => {
         });
       }
     }
-  }, [plants]);
+  }, [plants, weather]);
+
+  const filteredPlants =
+    categoryFilter === "all"
+      ? plants
+      : plants.filter((p) => p.category === categoryFilter);
 
   return (
     <div className="min-h-screen bg-background">
@@ -68,8 +75,50 @@ const Index = () => {
             onRefresh={refetch}
           />
 
+          {/* Category Filter */}
+          {plants.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              <Button
+                variant={categoryFilter === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCategoryFilter("all")}
+                className={categoryFilter === "all" ? "bg-gradient-primary" : ""}
+              >
+                Tutte ({plants.length})
+              </Button>
+              {["herbs", "succulents", "flowers", "vegetables", "indoor"].map(
+                (cat) => {
+                  const count = plants.filter((p) => p.category === cat).length;
+                  if (count === 0) return null;
+                  return (
+                    <Button
+                      key={cat}
+                      variant={categoryFilter === cat ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCategoryFilter(cat)}
+                      className={
+                        categoryFilter === cat ? "bg-gradient-primary" : ""
+                      }
+                    >
+                      {cat === "herbs"
+                        ? "Erbe"
+                        : cat === "succulents"
+                        ? "Succulente"
+                        : cat === "flowers"
+                        ? "Fiori"
+                        : cat === "vegetables"
+                        ? "Ortaggi"
+                        : "Interno"}{" "}
+                      ({count})
+                    </Button>
+                  );
+                }
+              )}
+            </div>
+          )}
+
           {/* Plants Grid */}
-          {plants.length === 0 ? (
+          {filteredPlants.length === 0 && plants.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <div className="bg-muted rounded-full p-6 mb-4">
                 <Leaf className="h-12 w-12 text-muted-foreground" />
@@ -88,14 +137,43 @@ const Index = () => {
                 Aggiungi Prima Pianta
               </Button>
             </div>
+          ) : filteredPlants.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <p className="text-muted-foreground">
+                Nessuna pianta in questa categoria
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-4"
+                onClick={() => setCategoryFilter("all")}
+              >
+                Mostra tutte
+              </Button>
+            </div>
           ) : (
             <div>
-              <h2 className="text-xl font-semibold mb-4">Le Tue Piante</h2>
+              <h2 className="text-xl font-semibold mb-4">
+                {categoryFilter === "all"
+                  ? "Le Tue Piante"
+                  : `${
+                      categoryFilter === "herbs"
+                        ? "Erbe Aromatiche"
+                        : categoryFilter === "succulents"
+                        ? "Succulente"
+                        : categoryFilter === "flowers"
+                        ? "Fiori"
+                        : categoryFilter === "vegetables"
+                        ? "Ortaggi"
+                        : "Piante da Interno"
+                    }`}
+              </h2>
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {plants.map((plant) => (
+                {filteredPlants.map((plant) => (
                   <PlantCard
                     key={plant.id}
                     plant={plant}
+                    weather={weather}
                     onClick={() => setSelectedPlant(plant)}
                   />
                 ))}
@@ -109,6 +187,7 @@ const Index = () => {
       {selectedPlant && (
         <PlantDetail
           plant={selectedPlant}
+          weather={weather}
           onUpdate={updatePlant}
           onDelete={removePlant}
           onClose={() => setSelectedPlant(null)}

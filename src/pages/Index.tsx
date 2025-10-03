@@ -48,7 +48,7 @@ const Index = () => {
                 <Leaf className="h-6 w-6 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">Il Mio Giardino</h1>
+                <h1 className="text-2xl font-bold">Garden Guardian Buddy</h1>
                 <p className="text-sm text-muted-foreground">
                   {plants.length} {plants.length === 1 ? "pianta" : "piante"} nel tuo giardino
                 </p>
@@ -59,7 +59,7 @@ const Index = () => {
               className="bg-gradient-primary shadow-soft"
             >
               <Plus className="mr-2 h-5 w-5" />
-              Aggiungi Pianta
+              Aggiungi
             </Button>
           </div>
         </div>

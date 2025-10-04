@@ -2,7 +2,6 @@ import { Weather } from "@/types/plant";
 
 // Usa Open-Meteo (gratuito, no API key richiesta)
 const WEATHER_API_URL = "https://api.open-meteo.com/v1";
-const GEOCODING_API_URL = "https://geocoding-api.open-meteo.com/v1";
 
 export async function getCurrentLocation(): Promise<GeolocationPosition> {
   return new Promise((resolve, reject) => {
@@ -21,19 +20,34 @@ export async function getCurrentLocation(): Promise<GeolocationPosition> {
 
 async function getLocationName(lat: number, lon: number): Promise<string> {
   try {
+    // Usa Nominatim di OpenStreetMap per reverse geocoding
     const response = await fetch(
-      `${GEOCODING_API_URL}/search?latitude=${lat}&longitude=${lon}&count=1&language=it&format=json`
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=it`,
+      {
+        headers: {
+          'User-Agent': 'GardenGuardian/1.0'
+        }
+      }
     );
     
     if (!response.ok) {
-      return "Posizione sconosciuta";
+      console.warn("Geocoding fallito, uso coordinate");
+      return `${lat.toFixed(2)}°, ${lon.toFixed(2)}°`;
     }
     
     const data = await response.json();
-    return data.results?.[0]?.name || "Posizione sconosciuta";
+    // Prova a ottenere città, altrimenti paese, altrimenti coordinate
+    const location = data.address?.city || 
+                     data.address?.town || 
+                     data.address?.village || 
+                     data.address?.county ||
+                     `${lat.toFixed(2)}°, ${lon.toFixed(2)}°`;
+    
+    console.log("Località trovata:", location);
+    return location;
   } catch (error) {
     console.error("Errore geocoding:", error);
-    return "Posizione sconosciuta";
+    return `${lat.toFixed(2)}°, ${lon.toFixed(2)}°`;
   }
 }
 

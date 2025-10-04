@@ -157,7 +157,7 @@ export function ReminderSettings({ plant, weather }: ReminderSettingsProps) {
             </div>
           </div>
 
-          {weather && (
+          {weather && plant.preferences && (
             <div className="text-xs text-muted-foreground space-y-1">
               <p>
                 📊 I promemoria si adattano automaticamente in base a meteo e preferenze della pianta

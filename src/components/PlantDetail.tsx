@@ -226,37 +226,47 @@ export function PlantDetail({
               </Card>
 
               {/* Plant Preferences */}
-              <Card className="p-4">
-                <h3 className="font-semibold text-sm mb-3">Condizioni Ideali</h3>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Temperatura</p>
-                    <p className="font-medium">
-                      {plant.preferences.minTemp}°C - {plant.preferences.maxTemp}°C
-                    </p>
+              {plant.preferences ? (
+                <Card className="p-4">
+                  <h3 className="font-semibold text-sm mb-3">Condizioni Ideali</h3>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Temperatura</p>
+                      <p className="font-medium">
+                        {plant.preferences.minTemp}°C - {plant.preferences.maxTemp}°C
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Umidità</p>
+                      <p className="font-medium">
+                        {plant.preferences.minHumidity}% - {plant.preferences.maxHumidity}%
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Esposizione</p>
+                      <p className="font-medium capitalize">
+                        {plant.preferences.sunlight === "full"
+                          ? "Sole pieno"
+                          : plant.preferences.sunlight === "partial"
+                          ? "Sole parziale"
+                          : "Ombra"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Categoria</p>
+                      <p className="font-medium capitalize">{plant.category}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">Umidità</p>
-                    <p className="font-medium">
-                      {plant.preferences.minHumidity}% - {plant.preferences.maxHumidity}%
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Esposizione</p>
-                    <p className="font-medium capitalize">
-                      {plant.preferences.sunlight === "full"
-                        ? "Sole pieno"
-                        : plant.preferences.sunlight === "partial"
-                        ? "Sole parziale"
-                        : "Ombra"}
-                    </p>
-                  </div>
-                  <div>
+                </Card>
+              ) : (
+                <Card className="p-4">
+                  <h3 className="font-semibold text-sm mb-3">Informazioni Pianta</h3>
+                  <div className="text-sm">
                     <p className="text-muted-foreground">Categoria</p>
                     <p className="font-medium capitalize">{plant.category}</p>
                   </div>
-                </div>
-              </Card>
+                </Card>
+              )}
 
               {/* Actions */}
               <div className="flex gap-3">

@@ -4,10 +4,11 @@ import { WeatherWidget } from "@/components/WeatherWidget";
 import { PlantCard } from "@/components/PlantCard";
 import { PlantDetail } from "@/components/PlantDetail";
 import { AddPlantModal } from "@/components/AddPlantModal";
+import { PlantVisionModal } from "@/components/PlantVisionModal";
 import { useWeather } from "@/hooks/useWeather";
 import { usePlants } from "@/hooks/usePlants";
 import { Plant } from "@/types/plant";
-import { Plus, Leaf } from "lucide-react";
+import { Plus, Leaf, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { shouldWater } from "@/lib/plantLogic";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,6 +18,7 @@ const Index = () => {
   const { plants, addPlant, updatePlant, removePlant } = usePlants(weather);
   const [selectedPlant, setSelectedPlant] = useState<Plant | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showVisionModal, setShowVisionModal] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
   // Check for plants that need water and show notifications
@@ -54,13 +56,24 @@ const Index = () => {
                 </p>
               </div>
             </div>
-            <Button
-              onClick={() => setShowAddModal(true)}
-              className="bg-gradient-primary shadow-soft"
-            >
-              <Plus className="mr-2 h-5 w-5" />
-              Aggiungi
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setShowVisionModal(true)}
+                variant="outline"
+                size="sm"
+                className="border-primary/20 hover:border-primary"
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                AI Doctor
+              </Button>
+              <Button
+                onClick={() => setShowAddModal(true)}
+                className="bg-gradient-primary shadow-soft"
+              >
+                <Plus className="mr-2 h-5 w-5" />
+                Aggiungi
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -197,6 +210,12 @@ const Index = () => {
       {showAddModal && (
         <AddPlantModal onAdd={addPlant} onClose={() => setShowAddModal(false)} />
       )}
+
+      <PlantVisionModal
+        open={showVisionModal}
+        onClose={() => setShowVisionModal(false)}
+        onAddPlant={addPlant}
+      />
     </div>
   );
 };

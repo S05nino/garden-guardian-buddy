@@ -181,13 +181,18 @@ export function shouldWater(plant: Plant, weather: Weather | null): boolean {
 }
 
 export function getDaysAlive(plant: Plant): number {
+  // Verifica che createdAt esista, altrimenti usa lastWatered come fallback
+  const startDate = plant.createdAt || plant.lastWatered;
   return Math.floor(
-    (Date.now() - new Date(plant.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+    (Date.now() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)
   );
 }
 
 export function getAverageHealth(plant: Plant): number {
-  if (plant.wateringHistory.length === 0) return plant.health;
+  // Verifica che wateringHistory esista e abbia elementi
+  if (!plant.wateringHistory || plant.wateringHistory.length === 0) {
+    return plant.health;
+  }
   
   // Calcola media salute basandosi sulla storia
   const recentHistory = plant.wateringHistory.slice(-10);

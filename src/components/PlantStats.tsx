@@ -24,12 +24,14 @@ export function PlantStats({ plant }: PlantStatsProps) {
   const daysAlive = getDaysAlive(plant);
   const avgHealth = getAverageHealth(plant);
 
-  // Prepara dati per grafico storico
-  const historyData = plant.wateringHistory.slice(-15).map((h) => ({
-    date: format(new Date(h.date), "dd/MM", { locale: it }),
-    acqua: Math.round(h.waterLevel * 100),
-    temp: h.weatherTemp,
-  }));
+  // Prepara dati per grafico storico (solo se wateringHistory esiste)
+  const historyData = plant.wateringHistory 
+    ? plant.wateringHistory.slice(-15).map((h) => ({
+        date: format(new Date(h.date), "dd/MM", { locale: it }),
+        acqua: Math.round(h.waterLevel * 100),
+        temp: h.weatherTemp,
+      }))
+    : [];
 
   const stats = [
     {
@@ -42,7 +44,7 @@ export function PlantStats({ plant }: PlantStatsProps) {
     {
       icon: Droplets,
       label: "Annaffiature totali",
-      value: plant.totalWaterings,
+      value: plant.totalWaterings || 0,
       unit: "volte",
       color: "text-accent",
     },
@@ -178,34 +180,35 @@ export function PlantStats({ plant }: PlantStatsProps) {
       <Card className="p-4">
         <h4 className="text-sm font-semibold mb-3">Ultime Annaffiature</h4>
         <div className="space-y-2 max-h-48 overflow-y-auto">
-          {plant.wateringHistory
-            .slice()
-            .reverse()
-            .slice(0, 10)
-            .map((h, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between text-sm py-2 border-b last:border-0"
-              >
-                <div className="flex items-center gap-2">
-                  <Droplets className="h-4 w-4 text-accent" />
-                  <span className="text-muted-foreground">
-                    {format(new Date(h.date), "dd MMM yyyy, HH:mm", {
-                      locale: it,
-                    })}
-                  </span>
+          {plant.wateringHistory && plant.wateringHistory.length > 0 ? (
+            plant.wateringHistory
+              .slice()
+              .reverse()
+              .slice(0, 10)
+              .map((h, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between text-sm py-2 border-b last:border-0"
+                >
+                  <div className="flex items-center gap-2">
+                    <Droplets className="h-4 w-4 text-accent" />
+                    <span className="text-muted-foreground">
+                      {format(new Date(h.date), "dd MMM yyyy, HH:mm", {
+                        locale: it,
+                      })}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      {Math.round(h.waterLevel * 100)}%
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {h.weatherTemp}°C
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">
-                    {Math.round(h.waterLevel * 100)}%
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {h.weatherTemp}°C
-                  </span>
-                </div>
-              </div>
-            ))}
-          {plant.wateringHistory.length === 0 && (
+              ))
+          ) : (
             <p className="text-sm text-muted-foreground text-center py-4">
               Nessuna annaffiatura registrata
             </p>

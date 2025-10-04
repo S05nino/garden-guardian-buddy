@@ -10,6 +10,11 @@ export function getWaterLevel(plant: Plant): number {
 export function calculateAdjustedWateringDays(plant: Plant, weather: Weather): number {
   let adjustedDays = plant.wateringDays;
 
+  // Se preferences non esiste, ritorna giorni base
+  if (!plant.preferences) {
+    return adjustedDays;
+  }
+
   // Temperatura fuori range ottimale aumenta il consumo
   if (weather.temp > plant.preferences.maxTemp) {
     const tempExcess = weather.temp - plant.preferences.maxTemp;
@@ -54,29 +59,32 @@ export function updateHealthBasedOnWeather(plant: Plant, weather: Weather): Plan
     };
   }
 
-  // Temperatura fuori range ottimale danneggia
-  if (weather.temp > plant.preferences.maxTemp) {
-    const tempExcess = weather.temp - plant.preferences.maxTemp;
-    if (waterLevel < 0.4) {
-      health = Math.max(0, health - Math.floor(tempExcess * 0.5));
+  // Solo se preferences esiste, considera temperatura e umidità
+  if (plant.preferences) {
+    // Temperatura fuori range ottimale danneggia
+    if (weather.temp > plant.preferences.maxTemp) {
+      const tempExcess = weather.temp - plant.preferences.maxTemp;
+      if (waterLevel < 0.4) {
+        health = Math.max(0, health - Math.floor(tempExcess * 0.5));
+      }
+    } else if (weather.temp < plant.preferences.minTemp) {
+      const tempDeficit = plant.preferences.minTemp - weather.temp;
+      health = Math.max(0, health - Math.floor(tempDeficit * 0.3));
     }
-  } else if (weather.temp < plant.preferences.minTemp) {
-    const tempDeficit = plant.preferences.minTemp - weather.temp;
-    health = Math.max(0, health - Math.floor(tempDeficit * 0.3));
-  }
 
-  // Temperatura ottimale + buona acqua = salute migliora
-  const inOptimalTemp = weather.temp >= plant.preferences.minTemp && 
-                        weather.temp <= plant.preferences.maxTemp;
-  if (inOptimalTemp && waterLevel > 0.5) {
-    health = Math.min(100, health + 1);
-  }
+    // Temperatura ottimale + buona acqua = salute migliora
+    const inOptimalTemp = weather.temp >= plant.preferences.minTemp && 
+                          weather.temp <= plant.preferences.maxTemp;
+    if (inOptimalTemp && waterLevel > 0.5) {
+      health = Math.min(100, health + 1);
+    }
 
-  // Umidità fuori range
-  if (weather.humidity < plant.preferences.minHumidity && waterLevel < 0.3) {
-    health = Math.max(0, health - 3);
-  } else if (weather.humidity > plant.preferences.maxHumidity && waterLevel > 0.8) {
-    health = Math.max(0, health - 2); // Troppa umidità + troppa acqua = problemi funghi
+    // Umidità fuori range
+    if (weather.humidity < plant.preferences.minHumidity && waterLevel < 0.3) {
+      health = Math.max(0, health - 3);
+    } else if (weather.humidity > plant.preferences.maxHumidity && waterLevel > 0.8) {
+      health = Math.max(0, health - 2); // Troppa umidità + troppa acqua = problemi funghi
+    }
   }
 
   // Poca acqua danneggia sempre
@@ -156,8 +164,8 @@ export function shouldWater(plant: Plant, weather: Weather | null): boolean {
   // Urgenza base
   if (waterLevel < 0.2) return true;
   
-  // Considera meteo
-  if (weather) {
+  // Considera meteo (solo se preferences esiste)
+  if (weather && plant.preferences) {
     // Con caldo eccessivo, anticipa l'annaffiatura
     if (weather.temp > plant.preferences.maxTemp && waterLevel < 0.4) {
       return true;

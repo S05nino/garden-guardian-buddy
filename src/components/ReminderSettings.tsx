@@ -9,6 +9,8 @@ import { calculateAdjustedWateringDays, getWaterLevel } from "@/lib/plantLogic";
 import {
   requestNotificationPermission,
   scheduleWateringReminder,
+  cancelWateringReminder,
+  testNotification,
 } from "@/lib/notifications";
 import { Bell, BellOff, Clock } from "lucide-react";
 import { toast } from "sonner";
@@ -33,21 +35,30 @@ export function ReminderSettings({ plant, weather }: ReminderSettingsProps) {
     setPermission(result);
 
     if (result === "granted") {
-      setNotificationsEnabled(true);
+      // Test immediato della notifica
+      const testResult = testNotification();
       
-      // Calcola quando serve la prossima annaffiatura
-      const waterLevel = getWaterLevel(plant);
-      const adjustedDays = weather
-        ? calculateAdjustedWateringDays(plant, weather)
-        : plant.wateringDays;
-      
-      const hoursRemaining = waterLevel * adjustedDays * 24;
-      
-      if (hoursRemaining > 0) {
-        scheduleWateringReminder(plant.name, hoursRemaining);
-        toast.success("Promemoria attivato! 🔔", {
-          description: `Ti avviseremo quando ${plant.name} avrà bisogno d'acqua`,
-        });
+      if (testResult) {
+        setNotificationsEnabled(true);
+        
+        // Calcola quando serve la prossima annaffiatura
+        const waterLevel = getWaterLevel(plant);
+        const adjustedDays = weather
+          ? calculateAdjustedWateringDays(plant, weather)
+          : plant.wateringDays;
+        
+        const hoursRemaining = waterLevel * adjustedDays * 24;
+        
+        console.log(`Programmazione promemoria per ${plant.name}: ${hoursRemaining} ore`);
+        
+        if (hoursRemaining > 0) {
+          scheduleWateringReminder(plant.name, hoursRemaining);
+          toast.success("Promemoria attivato! 🔔", {
+            description: `Ti avviseremo quando ${plant.name} avrà bisogno d'acqua (tra ${Math.floor(hoursRemaining / 24)}g ${Math.floor(hoursRemaining % 24)}h)`,
+          });
+        } else {
+          scheduleWateringReminder(plant.name, 0); // Notifica immediata
+        }
       }
     } else if (result === "denied") {
       toast.error("Permesso negato", {
@@ -58,6 +69,7 @@ export function ReminderSettings({ plant, weather }: ReminderSettingsProps) {
 
   const handleDisableNotifications = () => {
     setNotificationsEnabled(false);
+    cancelWateringReminder(plant.name);
     toast.info("Promemoria disattivato");
   };
 

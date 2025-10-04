@@ -13,18 +13,27 @@ export function useWeather() {
       setLoading(true);
       setError(null);
       
+      console.log("Richiesta posizione...");
       const position = await getCurrentLocation();
+      console.log("Posizione ottenuta:", position.coords.latitude, position.coords.longitude);
+      
       const weatherData = await getWeatherData(
         position.coords.latitude,
         position.coords.longitude
       );
+      console.log("Dati meteo ottenuti:", weatherData);
       
       setWeather(weatherData);
+      toast.success("Meteo aggiornato", {
+        description: `${weatherData.location}: ${weatherData.temp}°C`,
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Errore nel recupero meteo";
       setError(message);
+      console.error("Errore completo meteo:", err);
+      
       toast.error("Impossibile recuperare il meteo", {
-        description: "Verrà usato il meteo predefinito",
+        description: message,
       });
       
       // Set fallback weather
@@ -34,7 +43,7 @@ export function useWeather() {
         humidity: 60,
         precipitation: 0,
         location: "Posizione non disponibile",
-        icon: "//cdn.weatherapi.com/weather/64x64/day/116.png",
+        icon: "⛅",
       });
     } finally {
       setLoading(false);

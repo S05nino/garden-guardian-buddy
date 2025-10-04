@@ -36,7 +36,7 @@ export interface Weather {
   humidity: number;
   precipitation: number;
   location: string;
-  icon: string;
+  icon: string; // Ora è un emoji invece di URL
 }
 
 // Mappa icone per categoria

@@ -34,11 +34,7 @@ export function WeatherWidget({ weather, loading, onRefresh }: WeatherWidgetProp
               <span>{weather.location}</span>
             </div>
             <div className="flex items-center gap-3">
-              <img
-                src={weather.icon}
-                alt={weather.condition}
-                className="h-12 w-12"
-              />
+              <div className="text-5xl">{weather.icon}</div>
               <div>
                 <div className="text-3xl font-bold text-card-foreground">
                   {Math.round(weather.temp)}°C

@@ -13,6 +13,7 @@ import {
 } from "@/lib/plantLogic";
 import { Droplets, Heart, MapPin, Calendar, Trash2, X, BarChart3, Bell } from "lucide-react";
 import { toast } from "sonner";
+import { useMemo } from "react";
 import {
   PieChart,
   Pie,
@@ -39,13 +40,16 @@ export function PlantDetail({
   onDelete,
   onClose,
 }: PlantDetailProps) {
-  const waterLevel = getWaterLevel(plant);
-  const daysSinceWatered = Math.floor(
-    (Date.now() - new Date(plant.lastWatered).getTime()) / (1000 * 60 * 60 * 24)
+  // Ricalcola i valori quando plant o weather cambiano
+  const waterLevel = useMemo(() => getWaterLevel(plant), [plant]);
+  const daysSinceWatered = useMemo(
+    () => Math.floor((Date.now() - new Date(plant.lastWatered).getTime()) / (1000 * 60 * 60 * 24)),
+    [plant.lastWatered]
   );
-  const adjustedDays = weather
-    ? calculateAdjustedWateringDays(plant, weather)
-    : plant.wateringDays;
+  const adjustedDays = useMemo(
+    () => (weather ? calculateAdjustedWateringDays(plant, weather) : plant.wateringDays),
+    [plant, weather]
+  );
 
   const handleWater = () => {
     const result = waterPlant(plant, weather);

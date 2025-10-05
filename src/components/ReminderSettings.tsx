@@ -31,39 +31,56 @@ export function ReminderSettings({ plant, weather }: ReminderSettingsProps) {
   }, []);
 
   const handleEnableNotifications = async () => {
-    const result = await requestNotificationPermission();
-    setPermission(result);
-
-    if (result === "granted") {
-      // Test immediato della notifica
-      const testResult = testNotification();
-      
-      if (testResult) {
-        setNotificationsEnabled(true);
-        
-        // Calcola quando serve la prossima annaffiatura
-        const waterLevel = getWaterLevel(plant);
-        const adjustedDays = weather
-          ? calculateAdjustedWateringDays(plant, weather)
-          : plant.wateringDays;
-        
-        const hoursRemaining = waterLevel * adjustedDays * 24;
-        
-        console.log(`Programmazione promemoria per ${plant.name}: ${hoursRemaining} ore`);
-        
-        if (hoursRemaining > 0) {
-          scheduleWateringReminder(plant.name, hoursRemaining);
-          toast.success("Promemoria attivato! 🔔", {
-            description: `Ti avviseremo quando ${plant.name} avrà bisogno d'acqua (tra ${Math.floor(hoursRemaining / 24)}g ${Math.floor(hoursRemaining % 24)}h)`,
-          });
-        } else {
-          scheduleWateringReminder(plant.name, 0); // Notifica immediata
-        }
+    try {
+      // Controlla se il browser supporta le notifiche
+      if (!("Notification" in window)) {
+        toast.error("Il tuo browser non supporta le notifiche");
+        return;
       }
-    } else if (result === "denied") {
-      toast.error("Permesso negato", {
-        description: "Abilita le notifiche nelle impostazioni del browser",
-      });
+
+      const result = await requestNotificationPermission();
+      setPermission(result);
+
+      if (result === "granted") {
+        // Test immediato della notifica
+        const testResult = testNotification();
+        
+        if (testResult) {
+          setNotificationsEnabled(true);
+          
+          // Calcola quando serve la prossima annaffiatura
+          const waterLevel = getWaterLevel(plant);
+          const adjustedDays = weather
+            ? calculateAdjustedWateringDays(plant, weather)
+            : plant.wateringDays;
+          
+          const hoursRemaining = waterLevel * adjustedDays * 24;
+          
+          console.log(`Programmazione promemoria per ${plant.name}: ${hoursRemaining} ore`);
+          
+          if (hoursRemaining > 0) {
+            scheduleWateringReminder(plant.name, hoursRemaining);
+            toast.success("Promemoria attivato! 🔔", {
+              description: `Ti avviseremo quando ${plant.name} avrà bisogno d'acqua (tra ${Math.floor(hoursRemaining / 24)}g ${Math.floor(hoursRemaining % 24)}h)`,
+            });
+          } else {
+            scheduleWateringReminder(plant.name, 0); // Notifica immediata
+          }
+        } else {
+          toast.error("Errore nell'invio della notifica di test");
+        }
+      } else if (result === "denied") {
+        toast.error("Permesso negato", {
+          description: "Abilita le notifiche nelle impostazioni del browser",
+        });
+      } else {
+        toast.info("Permesso in attesa", {
+          description: "Prova di nuovo per attivare i promemoria",
+        });
+      }
+    } catch (error) {
+      console.error("Error enabling notifications:", error);
+      toast.error("Errore nell'attivazione dei promemoria");
     }
   };
 

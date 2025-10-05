@@ -25,16 +25,40 @@ export function PlantVisionModal({ open, onClose, onAddPlant }: PlantVisionModal
 
   const startCamera = async () => {
     try {
+      // Controlla se il browser supporta getUserMedia
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        toast.error("Il tuo browser non supporta l'accesso alla fotocamera");
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        } 
       });
+      
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        await videoRef.current.play();
         setCameraActive(true);
+        toast.success("Fotocamera attivata! 📸");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error accessing camera:', error);
-      toast.error("Impossibile accedere alla fotocamera");
+      
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        toast.error("Permesso fotocamera negato", {
+          description: "Abilita l'accesso alla fotocamera nelle impostazioni del browser"
+        });
+      } else if (error.name === 'NotFoundError') {
+        toast.error("Nessuna fotocamera trovata");
+      } else {
+        toast.error("Errore nell'accesso alla fotocamera", {
+          description: "Prova a ricaricare la pagina o usa il caricamento file"
+        });
+      }
     }
   };
 

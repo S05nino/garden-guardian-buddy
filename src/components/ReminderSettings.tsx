@@ -1,19 +1,18 @@
-import { useState, useEffect } from "react";
-import { Plant, Weather } from "@/types/plant";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { calculateAdjustedWateringDays, getWaterLevel } from "@/lib/plantLogic";
+import { useState, useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { Plant, Weather } from '@/types/plant';
+import { Card } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { Clock, Bell } from 'lucide-react';
+import { toast } from 'sonner';
+import { calculateAdjustedWateringDays, getWaterLevel } from '@/lib/plantLogic';
 import {
-  requestNotificationPermission,
+  ensureNotificationPermission,
   scheduleWateringReminder,
   cancelWateringReminder,
   testNotification,
-} from "@/lib/notifications";
-import { Bell, BellOff, Clock } from "lucide-react";
-import { toast } from "sonner";
+} from '@/lib/notifications';
 
 interface ReminderSettingsProps {
   plant: Plant;
@@ -22,78 +21,67 @@ interface ReminderSettingsProps {
 
 export function ReminderSettings({ plant, weather }: ReminderSettingsProps) {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [permission, setPermission] = useState<NotificationPermission>("default");
+  const [permission, setPermission] = useState<'granted' | 'denied' | 'default'>('default');
+  const isNative = Capacitor.isNativePlatform();
 
   useEffect(() => {
-    if ("Notification" in window) {
-      setPermission(Notification.permission);
+    if (!isNative && 'Notification' in window) {
+      setPermission(Notification.permission as 'granted' | 'denied' | 'default');
     }
-  }, []);
+  }, [isNative]);
 
   const handleEnableNotifications = async () => {
     try {
-      // Controlla se il browser supporta le notifiche
-      if (!("Notification" in window)) {
-        toast.error("Il tuo browser non supporta le notifiche");
+      if (!isNative && !('Notification' in window)) {
+        toast.error('Il tuo browser non supporta le notifiche');
         return;
       }
 
-      const result = await requestNotificationPermission();
+      const result = await ensureNotificationPermission();
       setPermission(result);
 
-      if (result === "granted") {
-        // Test immediato della notifica
-        const testResult = testNotification();
-        
-        if (testResult) {
-          setNotificationsEnabled(true);
-          
-          // Calcola quando serve la prossima annaffiatura
-          const waterLevel = getWaterLevel(plant);
-          const adjustedDays = weather
-            ? calculateAdjustedWateringDays(plant, weather)
-            : plant.wateringDays;
-          
-          const hoursRemaining = waterLevel * adjustedDays * 24;
-          
-          console.log(`Programmazione promemoria per ${plant.name}: ${hoursRemaining} ore`);
-          
-          if (hoursRemaining > 0) {
-            scheduleWateringReminder(plant.name, hoursRemaining);
-            toast.success("Promemoria attivato! 🔔", {
-              description: `Ti avviseremo quando ${plant.name} avrà bisogno d'acqua (tra ${Math.floor(hoursRemaining / 24)}g ${Math.floor(hoursRemaining % 24)}h)`,
-            });
-          } else {
-            scheduleWateringReminder(plant.name, 0); // Notifica immediata
-          }
-        } else {
-          toast.error("Errore nell'invio della notifica di test");
-        }
-      } else if (result === "denied") {
-        toast.error("Permesso negato", {
-          description: "Abilita le notifiche nelle impostazioni del browser",
-        });
-      } else {
-        toast.info("Permesso in attesa", {
-          description: "Prova di nuovo per attivare i promemoria",
+      if (result !== 'granted') {
+        toast.info('Attiva le notifiche nelle impostazioni dell’app o del browser');
+        return;
+      }
+
+      const testResult = await testNotification();
+      if (!testResult) {
+        toast.error('Errore nell’invio della notifica di test');
+        return;
+      }
+
+      setNotificationsEnabled(true);
+
+      const waterLevel = getWaterLevel(plant);
+      const adjustedDays = weather
+        ? calculateAdjustedWateringDays(plant, weather)
+        : plant.wateringDays;
+      const hoursRemaining = waterLevel * adjustedDays * 24;
+
+      await scheduleWateringReminder(plant.name, hoursRemaining > 0 ? hoursRemaining : 0);
+
+      if (hoursRemaining > 0) {
+        toast.success('Promemoria attivato! 🔔', {
+          description: `Ti avviseremo quando ${plant.name} avrà bisogno d’acqua (tra ${Math.floor(
+            hoursRemaining / 24
+          )}g ${Math.floor(hoursRemaining % 24)}h)`,
         });
       }
     } catch (error) {
-      console.error("Error enabling notifications:", error);
-      toast.error("Errore nell'attivazione dei promemoria");
+      console.error('Error enabling notifications:', error);
+      toast.error('Errore nell’attivazione dei promemoria');
     }
   };
 
-  const handleDisableNotifications = () => {
+  const handleDisableNotifications = async () => {
     setNotificationsEnabled(false);
-    cancelWateringReminder(plant.name);
-    toast.info("Promemoria disattivato");
+    await cancelWateringReminder(plant.name);
+    toast.info('Promemoria disattivato');
   };
 
   const waterLevel = getWaterLevel(plant);
-  const adjustedDays = weather
-    ? calculateAdjustedWateringDays(plant, weather)
-    : plant.wateringDays;
+  const adjustedDays = weather ? calculateAdjustedWateringDays(plant, weather) : plant.wateringDays;
   const hoursRemaining = waterLevel * adjustedDays * 24;
   const daysRemaining = Math.floor(hoursRemaining / 24);
   const hoursOnly = Math.floor(hoursRemaining % 24);
@@ -111,27 +99,24 @@ export function ReminderSettings({ plant, weather }: ReminderSettingsProps) {
           </div>
         </div>
         <Switch
-          checked={notificationsEnabled && permission === "granted"}
+          checked={notificationsEnabled && permission === 'granted'}
           onCheckedChange={(checked) => {
-            if (checked) {
-              handleEnableNotifications();
-            } else {
-              handleDisableNotifications();
-            }
+            if (checked) handleEnableNotifications();
+            else handleDisableNotifications();
           }}
         />
       </div>
 
-      {permission === "denied" && (
+      {permission === 'denied' && (
         <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
           <p className="font-medium">Notifiche bloccate</p>
           <p className="text-xs mt-1">
-            Abilita le notifiche nelle impostazioni del browser per ricevere promemoria
+            Abilita le notifiche nelle impostazioni dell’app o del browser per ricevere promemoria
           </p>
         </div>
       )}
 
-      {notificationsEnabled && permission === "granted" && (
+      {notificationsEnabled && permission === 'granted' && (
         <div className="space-y-3">
           <div className="flex items-start gap-3 rounded-lg bg-primary/5 p-3">
             <Clock className="h-5 w-5 text-primary mt-0.5" />
@@ -140,25 +125,22 @@ export function ReminderSettings({ plant, weather }: ReminderSettingsProps) {
               <p className="text-xs text-muted-foreground mt-1">
                 {daysRemaining > 0 ? (
                   <>
-                    Tra circa <strong>{daysRemaining}</strong>{" "}
-                    {daysRemaining === 1 ? "giorno" : "giorni"}
+                    Tra circa <strong>{daysRemaining}</strong>{' '}
+                    {daysRemaining === 1 ? 'giorno' : 'giorni'}
                     {hoursOnly > 0 && (
                       <>
-                        {" "}
-                        e <strong>{hoursOnly}</strong>{" "}
-                        {hoursOnly === 1 ? "ora" : "ore"}
+                        {' '}e <strong>{hoursOnly}</strong>{' '}
+                        {hoursOnly === 1 ? 'ora' : 'ore'}
                       </>
                     )}
                   </>
                 ) : hoursRemaining > 1 ? (
                   <>
-                    Tra circa <strong>{Math.floor(hoursRemaining)}</strong>{" "}
-                    {Math.floor(hoursRemaining) === 1 ? "ora" : "ore"}
+                    Tra circa <strong>{Math.floor(hoursRemaining)}</strong>{' '}
+                    {Math.floor(hoursRemaining) === 1 ? 'ora' : 'ore'}
                   </>
                 ) : (
-                  <span className="text-destructive font-medium">
-                    Serve acqua ora!
-                  </span>
+                  <span className="text-destructive font-medium">Serve acqua ora!</span>
                 )}
               </p>
               {weather && (
@@ -176,18 +158,12 @@ export function ReminderSettings({ plant, weather }: ReminderSettingsProps) {
 
           {weather && plant.preferences && (
             <div className="text-xs text-muted-foreground space-y-1">
-              <p>
-                📊 I promemoria si adattano automaticamente in base a meteo e preferenze della pianta
-              </p>
+              <p>📊 I promemoria si adattano automaticamente in base a meteo e preferenze della pianta</p>
               {weather.temp > plant.preferences.maxTemp && (
-                <p className="text-warning">
-                  ⚠️ Temperatura alta: frequenza aumentata
-                </p>
+                <p className="text-warning">⚠️ Temperatura alta: frequenza aumentata</p>
               )}
               {weather.precipitation > 0 && (
-                <p className="text-accent">
-                  💧 Pioggia rilevata: frequenza ridotta
-                </p>
+                <p className="text-accent">💧 Pioggia rilevata: frequenza ridotta</p>
               )}
             </div>
           )}

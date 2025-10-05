@@ -12,10 +12,12 @@ interface PlantVisionModalProps {
   open: boolean;
   onClose: () => void;
   onAddPlant?: (plantData: any) => void;
+  plantToDiagnose?: { id: string; name: string };
+  onUpdatePlantHealth?: (plantId: string, health: number) => void;
 }
 
-export function PlantVisionModal({ open, onClose, onAddPlant }: PlantVisionModalProps) {
-  const [mode, setMode] = useState<"identify" | "diagnose">("identify");
+export function PlantVisionModal({ open, onClose, onAddPlant, plantToDiagnose, onUpdatePlantHealth }: PlantVisionModalProps) {
+  const [mode, setMode] = useState<"identify" | "diagnose">(plantToDiagnose ? "diagnose" : "identify");
   const [image, setImage] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -124,6 +126,20 @@ export function PlantVisionModal({ open, onClose, onAddPlant }: PlantVisionModal
         });
       } else {
         toast.success("Analisi completata! 🔍");
+        
+        // Se stiamo diagnosticando una pianta specifica, aggiorna la salute
+        if (plantToDiagnose && onUpdatePlantHealth && data.overallHealth) {
+          const healthMap = {
+            'healthy': 100,
+            'fair': 60,
+            'poor': 30
+          };
+          const newHealth = healthMap[data.overallHealth as keyof typeof healthMap] || 50;
+          onUpdatePlantHealth(plantToDiagnose.id, newHealth);
+          toast.success(`Salute di ${plantToDiagnose.name} aggiornata a ${newHealth}%`, {
+            description: "Basata sull'analisi AI"
+          });
+        }
       }
     } catch (error) {
       console.error('Error analyzing image:', error);
@@ -157,7 +173,7 @@ export function PlantVisionModal({ open, onClose, onAddPlant }: PlantVisionModal
     stopCamera();
     setImage(null);
     setResult(null);
-    setMode("identify");
+    setMode(plantToDiagnose ? "diagnose" : "identify");
     onClose();
   };
 

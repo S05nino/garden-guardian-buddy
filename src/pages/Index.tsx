@@ -19,6 +19,7 @@ const Index = () => {
   const [selectedPlant, setSelectedPlant] = useState<Plant | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showVisionModal, setShowVisionModal] = useState(false);
+  const [plantToDiagnose, setPlantToDiagnose] = useState<{ id: string; name: string } | undefined>(undefined);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
   // Check for plants that need water and show notifications
@@ -204,6 +205,10 @@ const Index = () => {
           onUpdate={updatePlant}
           onDelete={removePlant}
           onClose={() => setSelectedPlant(null)}
+          onOpenAIDiagnosis={() => {
+            setPlantToDiagnose({ id: selectedPlant.id, name: selectedPlant.name });
+            setShowVisionModal(true);
+          }}
         />
       )}
 
@@ -213,8 +218,15 @@ const Index = () => {
 
       <PlantVisionModal
         open={showVisionModal}
-        onClose={() => setShowVisionModal(false)}
+        onClose={() => {
+          setShowVisionModal(false);
+          setPlantToDiagnose(undefined);
+        }}
         onAddPlant={addPlant}
+        plantToDiagnose={plantToDiagnose}
+        onUpdatePlantHealth={(plantId, health) => {
+          updatePlant(plantId, { health });
+        }}
       />
     </div>
   );

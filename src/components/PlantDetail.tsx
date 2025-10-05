@@ -11,7 +11,7 @@ import {
   waterPlant,
   calculateAdjustedWateringDays,
 } from "@/lib/plantLogic";
-import { Droplets, Heart, MapPin, Calendar, Trash2, X, BarChart3, Bell } from "lucide-react";
+import { Droplets, Heart, MapPin, Calendar, Trash2, X, BarChart3, Bell, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useMemo } from "react";
 import {
@@ -31,6 +31,7 @@ interface PlantDetailProps {
   onUpdate: (plantId: string, updates: Partial<Plant>) => void;
   onDelete: (plantId: string) => void;
   onClose: () => void;
+  onOpenAIDiagnosis?: () => void;
 }
 
 export function PlantDetail({
@@ -39,6 +40,7 @@ export function PlantDetail({
   onUpdate,
   onDelete,
   onClose,
+  onOpenAIDiagnosis,
 }: PlantDetailProps) {
   // Ricalcola i valori quando plant o weather cambiano
   const waterLevel = useMemo(() => getWaterLevel(plant), [plant]);
@@ -133,9 +135,22 @@ export function PlantDetail({
               </div>
               <Progress value={plant.health} className="h-3" />
               {plant.health < 40 && (
-                <p className="text-sm text-destructive mt-2">
-                  ⚠️ La pianta sta soffrendo! Controlla acqua e condizioni.
-                </p>
+                <div className="bg-destructive/10 rounded-lg p-3 mt-2 space-y-2">
+                  <p className="text-sm text-destructive font-medium">
+                    ⚠️ La pianta sta soffrendo! Controlla acqua e condizioni.
+                  </p>
+                  {onOpenAIDiagnosis && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={onOpenAIDiagnosis}
+                      className="w-full border-primary/20 hover:border-primary"
+                    >
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Diagnostica con AI
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
 

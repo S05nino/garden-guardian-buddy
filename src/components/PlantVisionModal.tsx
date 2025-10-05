@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Camera, Upload, Loader2, Sparkles, AlertTriangle, CheckCircle, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 
 interface PlantVisionModalProps {
   open: boolean;
@@ -27,66 +28,40 @@ export function PlantVisionModal({ open, onClose, onAddPlant, plantToDiagnose, o
 
   const startCamera = async () => {
     try {
-      // Controlla se il browser supporta getUserMedia
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        toast.error("Il tuo browser non supporta l'accesso alla fotocamera");
-        return;
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: 'environment',
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        } 
+      // Use Capacitor Camera plugin for native support
+      const image = await CapacitorCamera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Camera,
       });
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-        setCameraActive(true);
-        toast.success("Fotocamera attivata! 📸");
+
+      if (image.dataUrl) {
+        setImage(image.dataUrl);
+        toast.success("Foto scattata! 📸");
       }
     } catch (error: any) {
-      console.error('Error accessing camera:', error);
+      console.error("Errore accesso fotocamera:", error);
       
-      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+      // Check if user cancelled
+      if (error?.message?.toLowerCase().includes('cancel')) {
+        return; // User cancelled, no error needed
+      }
+      
+      // Provide specific error messages
+      if (error?.message?.toLowerCase().includes('permission')) {
         toast.error("Permesso fotocamera negato", {
-          description: "Abilita l'accesso alla fotocamera nelle impostazioni del browser"
+          description: "Abilita l'accesso alla fotocamera nelle impostazioni."
         });
-      } else if (error.name === 'NotFoundError') {
-        toast.error("Nessuna fotocamera trovata");
       } else {
-        toast.error("Errore nell'accesso alla fotocamera", {
-          description: "Prova a ricaricare la pagina o usa il caricamento file"
+        toast.error("Impossibile accedere alla fotocamera", {
+          description: "Prova a usare il caricamento file"
         });
       }
     }
   };
 
-  const stopCamera = () => {
-    if (videoRef.current?.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
-      videoRef.current.srcObject = null;
-      setCameraActive(false);
-    }
-  };
-
-  const capturePhoto = () => {
-    if (videoRef.current) {
-      const canvas = document.createElement('canvas');
-      canvas.width = videoRef.current.videoWidth;
-      canvas.height = videoRef.current.videoHeight;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(videoRef.current, 0, 0);
-        const imageData = canvas.toDataURL('image/jpeg', 0.8);
-        setImage(imageData);
-        stopCamera();
-      }
-    }
-  };
+  // Camera functions removed - Capacitor Camera handles everything
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -170,7 +145,7 @@ export function PlantVisionModal({ open, onClose, onAddPlant, plantToDiagnose, o
   };
 
   const handleClose = () => {
-    stopCamera();
+    setCameraActive(false);
     setImage(null);
     setResult(null);
     setMode(plantToDiagnose ? "diagnose" : "identify");
@@ -215,56 +190,33 @@ export function PlantVisionModal({ open, onClose, onAddPlant, plantToDiagnose, o
 
           <div className="mt-6 space-y-4">
             {!image ? (
-              <>
-                {/* Camera Preview */}
-                {cameraActive ? (
-                  <div className="space-y-4">
-                    <video
-                      ref={videoRef}
-                      autoPlay
-                      playsInline
-                      className="w-full rounded-lg"
-                    />
-                    <div className="flex gap-3">
-                      <Button onClick={capturePhoto} className="flex-1">
-                        <Camera className="mr-2 h-4 w-4" />
-                        Scatta Foto
-                      </Button>
-                      <Button variant="outline" onClick={stopCamera}>
-                        Annulla
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid gap-4">
-                    <Button
-                      onClick={startCamera}
-                      size="lg"
-                      className="w-full h-24"
-                      variant="outline"
-                    >
-                      <Camera className="mr-2 h-6 w-6" />
-                      Usa Fotocamera
-                    </Button>
-                    <Button
-                      onClick={() => fileInputRef.current?.click()}
-                      size="lg"
-                      className="w-full h-24"
-                      variant="outline"
-                    >
-                      <Upload className="mr-2 h-6 w-6" />
-                      Carica Foto
-                    </Button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileUpload}
-                      className="hidden"
-                    />
-                  </div>
-                )}
-              </>
+              <div className="grid gap-4">
+                <Button
+                  onClick={startCamera}
+                  size="lg"
+                  className="w-full h-24"
+                  variant="outline"
+                >
+                  <Camera className="mr-2 h-6 w-6" />
+                  Usa Fotocamera
+                </Button>
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  size="lg"
+                  className="w-full h-24"
+                  variant="outline"
+                >
+                  <Upload className="mr-2 h-6 w-6" />
+                  Carica Foto
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </div>
             ) : (
               <>
                 {/* Image Preview */}

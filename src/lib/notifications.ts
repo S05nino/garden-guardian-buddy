@@ -1,104 +1,137 @@
-export function requestNotificationPermission(): Promise<NotificationPermission> {
-  if (!("Notification" in window)) {
-    return Promise.resolve("denied");
-  }
-  
-  if (Notification.permission === "granted") {
-    return Promise.resolve("granted");
-  }
-  
-  if (Notification.permission !== "denied") {
-    return Notification.requestPermission();
-  }
-  
-  return Promise.resolve(Notification.permission);
-}
+import { LocalNotifications } from '@capacitor/local-notifications';
 
-export function sendBrowserNotification(title: string, body: string, icon?: string) {
-  if (Notification.permission === "granted") {
-    try {
-      const notification = new Notification(title, {
-        body,
-        icon: icon || "/favicon.ico",
-        badge: "/favicon.ico",
-        requireInteraction: false,
-        silent: false,
-      });
-      
-      // Auto-chiudi dopo 10 secondi
-      setTimeout(() => notification.close(), 10000);
-      
-      console.log("Notifica inviata:", title, body);
-    } catch (error) {
-      console.error("Errore invio notifica:", error);
+export async function requestNotificationPermission(): Promise<NotificationPermission> {
+  try {
+    // Check current permission status
+    const permission = await LocalNotifications.checkPermissions();
+    
+    if (permission.display === 'granted') {
+      return "granted";
     }
-  } else {
-    console.warn("Permesso notifiche non concesso");
+
+    // Request permission if not granted
+    const requested = await LocalNotifications.requestPermissions();
+    
+    if (requested.display === 'granted') {
+      return "granted";
+    } else if (requested.display === 'denied') {
+      return "denied";
+    } else {
+      return "default";
+    }
+  } catch (error) {
+    console.error("Error requesting notification permission:", error);
+    return "denied";
   }
 }
 
-// Mappa per tenere traccia dei timeout attivi
+export async function sendBrowserNotification(title: string, body: string, icon?: string) {
+  try {
+    const permission = await LocalNotifications.checkPermissions();
+    
+    if (permission.display === "granted") {
+      await LocalNotifications.schedule({
+        notifications: [
+          {
+            title,
+            body,
+            id: Date.now(),
+            schedule: { at: new Date(Date.now() + 1000) }, // Schedule 1 second from now
+            smallIcon: "ic_launcher",
+            iconColor: "#4CAF50",
+          }
+        ]
+      });
+      console.log("Notifica inviata:", title, body);
+    }
+  } catch (error) {
+    console.error("Error showing notification:", error);
+  }
+}
+
+// Mappa per tenere traccia degli ID delle notifiche attive
 const activeReminders = new Map<string, number>();
 
-export function scheduleWateringReminder(plantName: string, hoursUntilWatering: number) {
-  // Cancella eventuali promemoria precedenti per questa pianta
-  if (activeReminders.has(plantName)) {
-    clearTimeout(activeReminders.get(plantName));
-    activeReminders.delete(plantName);
-  }
-  
-  // Se serve acqua ora, invia notifica immediata
-  if (hoursUntilWatering <= 0) {
-    sendBrowserNotification(
-      "Tempo di annaffiare! 💧",
-      `${plantName} ha bisogno d'acqua adesso`,
-    );
-    return;
-  }
-  
-  const milliseconds = hoursUntilWatering * 60 * 60 * 1000;
-  const maxTimeout = 2147483647; // Max setTimeout value (~24 giorni)
-  
-  // Se il timeout è troppo lungo, programma per il massimo e ri-schedula dopo
-  if (milliseconds > maxTimeout) {
-    const timeoutId = window.setTimeout(() => {
-      // Ricalcola il tempo rimanente
-      const remainingHours = hoursUntilWatering - (maxTimeout / (60 * 60 * 1000));
-      scheduleWateringReminder(plantName, remainingHours);
-    }, maxTimeout);
-    
-    activeReminders.set(plantName, timeoutId);
-    console.log(`Promemoria programmato per ${plantName} tra ${hoursUntilWatering} ore (parte 1)`);
-  } else {
-    const timeoutId = window.setTimeout(() => {
-      sendBrowserNotification(
-        "Promemoria irrigazione 🌱",
-        `Ricordati di annaffiare ${plantName}`,
+export async function scheduleWateringReminder(plantName: string, hoursUntilWatering: number) {
+  try {
+    // Cancel any existing reminder for this plant
+    await cancelWateringReminder(plantName);
+
+    // Don't schedule if it's too far in the future (more than 24 hours)
+    if (hoursUntilWatering > 24) {
+      console.log(`Reminder for ${plantName} is too far in the future (${hoursUntilWatering} hours). Will reschedule closer to time.`);
+      return;
+    }
+
+    // Calculate the notification time
+    const notificationTime = new Date(Date.now() + (hoursUntilWatering * 60 * 60 * 1000));
+
+    // If the reminder is for right now or the past, send it immediately
+    if (hoursUntilWatering <= 0) {
+      await sendBrowserNotification(
+        "Tempo di annaffiare! 💧",
+        `${plantName} ha bisogno d'acqua adesso`,
+        "ic_launcher"
       );
-      activeReminders.delete(plantName);
-    }, milliseconds);
+      return;
+    }
+
+    // Generate a unique ID for this plant notification
+    const notificationId = Math.abs(plantName.split('').reduce((hash, char) => {
+      return ((hash << 5) - hash) + char.charCodeAt(0);
+    }, 0));
+
+    // Schedule the reminder
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          title: "Promemoria irrigazione 🌱",
+          body: `Ricordati di annaffiare ${plantName}`,
+          id: notificationId,
+          schedule: { at: notificationTime },
+          smallIcon: "ic_launcher",
+          iconColor: "#4CAF50",
+        }
+      ]
+    });
+
+    // Store the notification ID
+    activeReminders.set(plantName, notificationId);
     
-    activeReminders.set(plantName, timeoutId);
     console.log(`Promemoria programmato per ${plantName} tra ${hoursUntilWatering} ore`);
+  } catch (error) {
+    console.error("Error scheduling reminder:", error);
   }
 }
 
-export function cancelWateringReminder(plantName: string) {
-  if (activeReminders.has(plantName)) {
-    clearTimeout(activeReminders.get(plantName));
-    activeReminders.delete(plantName);
-    console.log(`Promemoria cancellato per ${plantName}`);
+export async function cancelWateringReminder(plantName: string) {
+  try {
+    const notificationId = activeReminders.get(plantName);
+    if (notificationId) {
+      await LocalNotifications.cancel({ notifications: [{ id: notificationId }] });
+      activeReminders.delete(plantName);
+      console.log(`Promemoria cancellato per ${plantName}`);
+    }
+  } catch (error) {
+    console.error("Error cancelling reminder:", error);
   }
 }
 
 // Test immediato della notifica
-export function testNotification() {
-  if (Notification.permission === "granted") {
-    sendBrowserNotification(
-      "Test notifica 🔔",
-      "Le notifiche funzionano correttamente!",
-    );
-    return true;
+export async function testNotification() {
+  try {
+    const permission = await requestNotificationPermission();
+    if (permission === "granted") {
+      await sendBrowserNotification(
+        "Test notifica 🔔",
+        "Le notifiche funzionano correttamente!",
+        "ic_launcher"
+      );
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error("Error testing notification:", error);
+    return false;
   }
-  return false;
 }

@@ -1,21 +1,44 @@
 import { Weather } from "@/types/plant";
+import { Geolocation } from '@capacitor/geolocation';
 
 // Usa Open-Meteo (gratuito, no API key richiesta)
 const WEATHER_API_URL = "https://api.open-meteo.com/v1";
 
 export async function getCurrentLocation(): Promise<GeolocationPosition> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error("Geolocalizzazione non supportata"));
-      return;
+  try {
+    // Request permission first
+    const permission = await Geolocation.checkPermissions();
+    if (permission.location !== 'granted') {
+      const requested = await Geolocation.requestPermissions();
+      if (requested.location !== 'granted') {
+        throw new Error("Permesso di geolocalizzazione negato");
+      }
     }
 
-    navigator.geolocation.getCurrentPosition(resolve, reject, {
+    // Get position using Capacitor plugin
+    const position = await Geolocation.getCurrentPosition({
       enableHighAccuracy: true,
       timeout: 10000,
       maximumAge: 0,
     });
-  });
+
+    // Convert Capacitor position to standard GeolocationPosition format
+    return {
+      coords: {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+        altitude: position.coords.altitude,
+        altitudeAccuracy: position.coords.altitudeAccuracy,
+        heading: position.coords.heading,
+        speed: position.coords.speed,
+      },
+      timestamp: position.timestamp,
+    } as GeolocationPosition;
+  } catch (error) {
+    console.error("Errore geolocalizzazione:", error);
+    throw new Error("Impossibile ottenere la posizione. Assicurati di aver dato i permessi.");
+  }
 }
 
 async function getLocationName(lat: number, lon: number): Promise<string> {

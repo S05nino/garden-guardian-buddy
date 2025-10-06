@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { Preferences } from '@capacitor/preferences';
 import { Plant, Weather } from '@/types/plant';
 import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Bell } from 'lucide-react';
 import { toast } from 'sonner';
-import { calculateAdjustedWateringDays, getWaterLevel } from '@/lib/plantLogic';
+import {
+  calculateAdjustedWateringDays,
+  getWaterLevel,
+} from '@/lib/plantLogic';
 import {
   ensureNotificationPermission,
   scheduleWateringReminder,
@@ -24,6 +28,30 @@ export function ReminderSettings({ plant, weather, onUpdate }: ReminderSettingsP
   const [notificationsEnabled, setNotificationsEnabled] = useState(plant.remindersEnabled || false);
   const [permission, setPermission] = useState<'granted' | 'denied' | 'default'>('default');
   const isNative = Capacitor.isNativePlatform();
+
+  // 🔹 Recupera stato salvato su Android o Web
+  useEffect(() => {
+    const restoreReminder = async () => {
+      try {
+        const stored = await Preferences.get({ key: `reminder_${plant.id}` });
+        if (stored.value) {
+          const data = JSON.parse(stored.value);
+          if (data.enabled) {
+            setNotificationsEnabled(true);
+            onUpdate(plant.id, { remindersEnabled: true });
+            // Ricrea il reminder se era ancora valido
+            const remaining = data.nextReminder - Date.now();
+            if (remaining > 0) {
+              await scheduleWateringReminder(plant.name, remaining / 3600000);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Errore nel recupero del reminder salvato:', err);
+      }
+    };
+    restoreReminder();
+  }, [plant.id, onUpdate]);
 
   useEffect(() => {
     if (!isNative && 'Notification' in window) {
@@ -67,6 +95,15 @@ export function ReminderSettings({ plant, weather, onUpdate }: ReminderSettingsP
 
       await scheduleWateringReminder(plant.name, hoursRemaining > 0 ? hoursRemaining : 0);
 
+      // 🔹 Salva il reminder localmente per persistenza Android
+      await Preferences.set({
+        key: `reminder_${plant.id}`,
+        value: JSON.stringify({
+          enabled: true,
+          nextReminder: Date.now() + hoursRemaining * 3600 * 1000,
+        }),
+      });
+
       if (hoursRemaining > 0) {
         toast.success('Promemoria attivato! 🔔', {
           description: `Ti avviseremo quando ${plant.name} avrà bisogno d’acqua (tra ${Math.floor(
@@ -84,11 +121,14 @@ export function ReminderSettings({ plant, weather, onUpdate }: ReminderSettingsP
     setNotificationsEnabled(false);
     onUpdate(plant.id, { remindersEnabled: false });
     await cancelWateringReminder(plant.name);
+    await Preferences.remove({ key: `reminder_${plant.id}` });
     toast.info('Promemoria disattivato');
   };
 
   const waterLevel = getWaterLevel(plant);
-  const adjustedDays = weather ? calculateAdjustedWateringDays(plant, weather) : plant.wateringDays;
+  const adjustedDays = weather
+    ? calculateAdjustedWateringDays(plant, weather)
+    : plant.wateringDays;
   const hoursRemaining = waterLevel * adjustedDays * 24;
   const daysRemaining = Math.floor(hoursRemaining / 24);
   const hoursOnly = Math.floor(hoursRemaining % 24);

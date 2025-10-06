@@ -11,7 +11,13 @@ import { Plant } from "@/types/plant";
 import { Plus, Leaf, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { shouldWater } from "@/lib/plantLogic";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
 
 const Index = () => {
   const { weather, loading: weatherLoading, refetch } = useWeather();
@@ -59,26 +65,33 @@ const Index = () => {
               </div>
             </div>
             <div className="flex gap-2">
-              <Button
-                onClick={() => {
-                  setVisionMode("identify");
-                  setPlantToDiagnose(undefined);
-                  setShowVisionModal(true);
-                }}
-                size="sm"
-                className="bg-gradient-primary shadow-soft"
-              >
-                <Sparkles className="mr-2 h-4 w-4" />
-                Identifica con AI
-              </Button>
-              <Button
-                onClick={() => setShowAddModal(true)}
-                variant="outline"
-                size="sm"
-              >
-                <Plus className="mr-2 h-5 w-5" />
-                Aggiungi
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Plus className="mr-2 h-5 w-5" />
+                    Aggiungi
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => setShowAddModal(true)}
+                    className="cursor-pointer"
+                  >
+                    ➕ Aggiungi manualmente
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setVisionMode("identify");
+                      setPlantToDiagnose(undefined);
+                      setShowVisionModal(true);
+                    }}
+                    className="cursor-pointer"
+                  >
+                    ✨ Identifica con AI
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
             </div>
           </div>
         </div>

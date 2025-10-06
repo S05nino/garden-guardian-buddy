@@ -21,6 +21,7 @@ const Index = () => {
   const [showVisionModal, setShowVisionModal] = useState(false);
   const [plantToDiagnose, setPlantToDiagnose] = useState<{ id: string; name: string } | undefined>(undefined);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [visionMode, setVisionMode] = useState<"identify" | "diagnose">("identify");
 
   // Check for plants that need water and show notifications
   useEffect(() => {
@@ -59,17 +60,21 @@ const Index = () => {
             </div>
             <div className="flex gap-2">
               <Button
-                onClick={() => setShowVisionModal(true)}
-                variant="outline"
+                onClick={() => {
+                  setVisionMode("identify");
+                  setPlantToDiagnose(undefined);
+                  setShowVisionModal(true);
+                }}
                 size="sm"
-                className="border-primary/20 hover:border-primary"
+                className="bg-gradient-primary shadow-soft"
               >
                 <Sparkles className="mr-2 h-4 w-4" />
-                AI Doctor
+                Identifica con AI
               </Button>
               <Button
                 onClick={() => setShowAddModal(true)}
-                className="bg-gradient-primary shadow-soft"
+                variant="outline"
+                size="sm"
               >
                 <Plus className="mr-2 h-5 w-5" />
                 Aggiungi
@@ -207,7 +212,9 @@ const Index = () => {
           onClose={() => setSelectedPlant(null)}
           onOpenAIDiagnosis={() => {
             setPlantToDiagnose({ id: selectedPlant.id, name: selectedPlant.name });
+            setVisionMode("diagnose");
             setShowVisionModal(true);
+            setSelectedPlant(null);
           }}
         />
       )}
@@ -221,7 +228,9 @@ const Index = () => {
         onClose={() => {
           setShowVisionModal(false);
           setPlantToDiagnose(undefined);
+          setVisionMode("identify");
         }}
+        mode={visionMode}
         onAddPlant={addPlant}
         plantToDiagnose={plantToDiagnose}
         onUpdatePlantHealth={(plantId, health) => {

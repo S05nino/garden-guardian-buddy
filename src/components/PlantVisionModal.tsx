@@ -12,13 +12,14 @@ import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capa
 interface PlantVisionModalProps {
   open: boolean;
   onClose: () => void;
+  mode?: "identify" | "diagnose";
   onAddPlant?: (plantData: any) => void;
   plantToDiagnose?: { id: string; name: string };
   onUpdatePlantHealth?: (plantId: string, health: number) => void;
 }
 
-export function PlantVisionModal({ open, onClose, onAddPlant, plantToDiagnose, onUpdatePlantHealth }: PlantVisionModalProps) {
-  const [mode, setMode] = useState<"identify" | "diagnose">(plantToDiagnose ? "diagnose" : "identify");
+export function PlantVisionModal({ open, onClose, mode: propMode, onAddPlant, plantToDiagnose, onUpdatePlantHealth }: PlantVisionModalProps) {
+  const [mode, setMode] = useState<"identify" | "diagnose">(propMode || (plantToDiagnose ? "diagnose" : "identify"));
   const [image, setImage] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -137,9 +138,10 @@ export function PlantVisionModal({ open, onClose, onAddPlant, plantToDiagnose, o
         preferences: result.preferences,
         icon: "🌿",
         imageUrl: image || undefined,
+        health: result.initialHealth || 100,
       };
       onAddPlant(plantData);
-      toast.success(`${result.name} aggiunta al giardino! 🌱`);
+      toast.success(`${result.name} aggiunta al giardino! 🌱 Salute iniziale: ${result.initialHealth || 100}%`);
       handleClose();
     }
   };
@@ -148,7 +150,7 @@ export function PlantVisionModal({ open, onClose, onAddPlant, plantToDiagnose, o
     setCameraActive(false);
     setImage(null);
     setResult(null);
-    setMode(plantToDiagnose ? "diagnose" : "identify");
+    setMode(propMode || (plantToDiagnose ? "diagnose" : "identify"));
     onClose();
   };
 
@@ -177,16 +179,18 @@ export function PlantVisionModal({ open, onClose, onAddPlant, plantToDiagnose, o
         </DialogHeader>
 
         <Tabs value={mode} onValueChange={(v) => setMode(v as any)} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="identify">
-              <Sparkles className="mr-2 h-4 w-4" />
-              Identifica Pianta
-            </TabsTrigger>
-            <TabsTrigger value="diagnose">
-              <AlertTriangle className="mr-2 h-4 w-4" />
-              Diagnostica Problemi
-            </TabsTrigger>
-          </TabsList>
+          {!plantToDiagnose && (
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="identify">
+                <Sparkles className="mr-2 h-4 w-4" />
+                Identifica Pianta
+              </TabsTrigger>
+              <TabsTrigger value="diagnose">
+                <AlertTriangle className="mr-2 h-4 w-4" />
+                Diagnostica Problemi
+              </TabsTrigger>
+            </TabsList>
+          )}
 
           <div className="mt-6 space-y-4">
             {!image ? (
@@ -273,6 +277,13 @@ export function PlantVisionModal({ open, onClose, onAddPlant, plantToDiagnose, o
                           {result.scientificName}
                         </p>
                         <p className="text-sm">{result.description}</p>
+                        {result.initialHealth && (
+                          <div className="mt-3 p-2 bg-muted rounded-lg">
+                            <p className="text-sm font-medium">
+                              Salute rilevata: <span className="text-primary">{result.initialHealth}%</span>
+                            </p>
+                          </div>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-2 gap-3 text-sm">

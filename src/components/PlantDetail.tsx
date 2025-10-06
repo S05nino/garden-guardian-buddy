@@ -135,24 +135,25 @@ export function PlantDetail({
               </div>
               <Progress value={plant.health} className="h-3" />
               {plant.health < 40 && (
-                <div className="bg-destructive/10 rounded-lg p-3 mt-2 space-y-2">
+                <div className="bg-destructive/10 rounded-lg p-3 mt-2">
                   <p className="text-sm text-destructive font-medium">
                     ⚠️ La pianta sta soffrendo! Controlla acqua e condizioni.
                   </p>
-                  {onOpenAIDiagnosis && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={onOpenAIDiagnosis}
-                      className="w-full border-primary/20 hover:border-primary"
-                    >
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Diagnostica con AI
-                    </Button>
-                  )}
                 </div>
               )}
             </div>
+
+            {/* AI Diagnosis Button - Always visible */}
+            {onOpenAIDiagnosis && (
+              <Button
+                variant="outline"
+                onClick={onOpenAIDiagnosis}
+                className="w-full gap-2 border-primary/20 hover:border-primary"
+              >
+                <Sparkles className="h-4 w-4" />
+                Diagnostica con AI
+              </Button>
+            )}
 
             {/* Water Level Chart */}
             <div className="bg-muted/50 rounded-lg p-4">

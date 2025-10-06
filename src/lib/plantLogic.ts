@@ -43,7 +43,7 @@ export function updateHealthBasedOnWeather(plant: Plant, weather: Weather): Plan
   const waterLevel = getWaterLevel(plant);
 
   // Pioggia significativa annaffia automaticamente
-  if (weather.precipitation > 5) {
+  if (weather.precipitation > 5 && plant.position?.toLowerCase().includes('esterno')) {
     const newHistory: WateringHistory = {
       date: new Date().toISOString(),
       waterLevel: waterLevel,
@@ -54,47 +54,52 @@ export function updateHealthBasedOnWeather(plant: Plant, weather: Weather): Plan
     return {
       ...plant,
       lastWatered: new Date().toISOString(),
-      health: Math.min(100, health + 3),
-      wateringHistory: [...plant.wateringHistory, newHistory].slice(-30), // Keep last 30
+      health: Math.min(100, health + 5),
+      wateringHistory: [...plant.wateringHistory, newHistory].slice(-30),
     };
   }
 
-  // Solo se preferences esiste, considera temperatura e umidità
-  if (plant.preferences) {
+  // Gestione livello acqua (sempre applicabile)
+  if (waterLevel < 0.1) {
+    // Acqua critica - danno severo
+    health = Math.max(0, health - 20);
+  } else if (waterLevel < 0.2) {
+    // Poca acqua - danno moderato
+    health = Math.max(0, health - 12);
+  } else if (waterLevel < 0.3) {
+    // Acqua bassa - danno lieve
+    health = Math.max(0, health - 5);
+  } else if (waterLevel > 0.95) {
+    // Troppa acqua - rischio marciume
+    health = Math.max(0, health - 8);
+  }
+
+  // Solo se preferences esiste, considera temperatura e umidità (per piante da esterno)
+  if (plant.preferences && plant.position?.toLowerCase().includes('esterno')) {
     // Temperatura fuori range ottimale danneggia
     if (weather.temp > plant.preferences.maxTemp) {
       const tempExcess = weather.temp - plant.preferences.maxTemp;
-      if (waterLevel < 0.4) {
-        health = Math.max(0, health - Math.floor(tempExcess * 0.5));
-      }
+      // Caldo eccessivo danneggia di più se c'è poca acqua
+      const waterPenalty = waterLevel < 0.4 ? 2 : 1;
+      health = Math.max(0, health - Math.floor(tempExcess * 0.8 * waterPenalty));
     } else if (weather.temp < plant.preferences.minTemp) {
       const tempDeficit = plant.preferences.minTemp - weather.temp;
-      health = Math.max(0, health - Math.floor(tempDeficit * 0.3));
+      health = Math.max(0, health - Math.floor(tempDeficit * 0.5));
     }
 
     // Temperatura ottimale + buona acqua = salute migliora
     const inOptimalTemp = weather.temp >= plant.preferences.minTemp && 
                           weather.temp <= plant.preferences.maxTemp;
-    if (inOptimalTemp && waterLevel > 0.5) {
-      health = Math.min(100, health + 1);
+    if (inOptimalTemp && waterLevel > 0.5 && waterLevel < 0.9) {
+      health = Math.min(100, health + 2);
     }
 
     // Umidità fuori range
     if (weather.humidity < plant.preferences.minHumidity && waterLevel < 0.3) {
-      health = Math.max(0, health - 3);
+      health = Math.max(0, health - 5);
     } else if (weather.humidity > plant.preferences.maxHumidity && waterLevel > 0.8) {
-      health = Math.max(0, health - 2); // Troppa umidità + troppa acqua = problemi funghi
+      health = Math.max(0, health - 4); // Troppa umidità + troppa acqua = problemi funghi
     }
-  }
-
-  // Poca acqua danneggia sempre
-  if (waterLevel < 0.2) {
-    health = Math.max(0, health - 8);
-  }
-
-  // Acqua critica (sotto 10%)
-  if (waterLevel < 0.1) {
-    health = Math.max(0, health - 15);
   }
 
   return {

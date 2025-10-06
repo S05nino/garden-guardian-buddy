@@ -309,7 +309,7 @@ export function PlantDetail({
             </TabsContent>
 
             <TabsContent value="reminders" className="mt-6">
-              <ReminderSettings plant={plant} weather={weather} />
+              <ReminderSettings plant={plant} weather={weather} onUpdate={onUpdate} />
             </TabsContent>
           </Tabs>
         </div>

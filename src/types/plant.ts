@@ -28,6 +28,7 @@ export interface Plant {
   wateringHistory: WateringHistory[];
   createdAt: string;
   totalWaterings: number;
+  remindersEnabled?: boolean;
 }
 
 export interface Weather {

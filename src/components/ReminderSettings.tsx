@@ -17,10 +17,11 @@ import {
 interface ReminderSettingsProps {
   plant: Plant;
   weather: Weather | null;
+  onUpdate: (plantId: string, updates: Partial<Plant>) => void;
 }
 
-export function ReminderSettings({ plant, weather }: ReminderSettingsProps) {
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+export function ReminderSettings({ plant, weather, onUpdate }: ReminderSettingsProps) {
+  const [notificationsEnabled, setNotificationsEnabled] = useState(plant.remindersEnabled || false);
   const [permission, setPermission] = useState<'granted' | 'denied' | 'default'>('default');
   const isNative = Capacitor.isNativePlatform();
 
@@ -29,6 +30,10 @@ export function ReminderSettings({ plant, weather }: ReminderSettingsProps) {
       setPermission(Notification.permission as 'granted' | 'denied' | 'default');
     }
   }, [isNative]);
+
+  useEffect(() => {
+    setNotificationsEnabled(plant.remindersEnabled || false);
+  }, [plant.remindersEnabled]);
 
   const handleEnableNotifications = async () => {
     try {
@@ -52,6 +57,7 @@ export function ReminderSettings({ plant, weather }: ReminderSettingsProps) {
       }
 
       setNotificationsEnabled(true);
+      onUpdate(plant.id, { remindersEnabled: true });
 
       const waterLevel = getWaterLevel(plant);
       const adjustedDays = weather
@@ -76,6 +82,7 @@ export function ReminderSettings({ plant, weather }: ReminderSettingsProps) {
 
   const handleDisableNotifications = async () => {
     setNotificationsEnabled(false);
+    onUpdate(plant.id, { remindersEnabled: false });
     await cancelWateringReminder(plant.name);
     toast.info('Promemoria disattivato');
   };

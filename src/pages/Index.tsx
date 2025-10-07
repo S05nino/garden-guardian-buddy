@@ -9,6 +9,7 @@ import { useWeather } from "@/hooks/useWeather";
 import { usePlants } from "@/hooks/usePlants";
 import { Plant } from "@/types/plant";
 import { Plus, Leaf, Sparkles } from "lucide-react";
+import { FaPersonDigging } from "react-icons/fa6";
 import { toast } from "sonner";
 import { shouldWater } from "@/lib/plantLogic";
 import {
@@ -54,11 +55,9 @@ const Index = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="bg-gradient-primary p-2 rounded-lg">
-                <Leaf className="h-6 w-6 text-primary-foreground" />
-              </div>
+              <img src="dist/icon/ggb.png" alt="Contadino" className="h-10 w-10 rounded-lg"/>
               <div>
-                <h1 className="text-2xl font-bold">Garden Guardian Buddy</h1>
+                <h1 className="text-2xl font-bold">Garden Buddy</h1>
                 <p className="text-sm text-muted-foreground">
                   {plants.length} {plants.length === 1 ? "pianta" : "piante"} nel tuo giardino
                 </p>

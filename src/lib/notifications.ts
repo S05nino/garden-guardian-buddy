@@ -1,5 +1,6 @@
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
+import { Preferences } from '@capacitor/preferences';
 
 /**
  * Richiede i permessi di notifica.
@@ -65,15 +66,13 @@ const activeReminders = new Map<string, number>();
 
 /**
  * Programma un promemoria di annaffiatura.
- * Web invia solo notifica immediata.
+ * Su Android/iOS crea notifiche programmate persistenti.
  */
 export async function scheduleWateringReminder(plantName: string, hoursUntilWatering: number) {
   try {
     await cancelWateringReminder(plantName);
 
     if (Capacitor.isNativePlatform()) {
-      if (hoursUntilWatering > 24) return;
-
       const notificationTime = new Date(Date.now() + hoursUntilWatering * 60 * 60 * 1000);
       const notificationId = Math.abs(
         plantName.split('').reduce((hash, char) => ((hash << 5) - hash) + char.charCodeAt(0), 0)
@@ -84,16 +83,29 @@ export async function scheduleWateringReminder(plantName: string, hoursUntilWate
           {
             id: notificationId,
             title: 'Promemoria irrigazione 🌱',
-            body: `Ricordati di annaffiare ${plantName}`,
+            body: `È ora di annaffiare ${plantName}`,
             schedule: { at: notificationTime },
             smallIcon: 'ic_launcher',
             iconColor: '#4CAF50',
+            sound: 'default',
+            autoCancel: true,
           },
         ],
       });
 
       activeReminders.set(plantName, notificationId);
-      console.log(`Promemoria programmato per ${plantName} tra ${hoursUntilWatering} ore`);
+      
+      // Salva il reminder per persistenza
+      await Preferences.set({
+        key: `reminder_${plantName}`,
+        value: JSON.stringify({
+          notificationId,
+          scheduledTime: notificationTime.getTime(),
+          plantName,
+        }),
+      });
+
+      console.log(`Promemoria programmato per ${plantName} alle ${notificationTime.toLocaleString()}`);
     } else {
       await sendNotification(
         'Promemoria irrigazione 🌱',
@@ -117,9 +129,43 @@ export async function cancelWateringReminder(plantName: string) {
         activeReminders.delete(plantName);
         console.log(`Promemoria cancellato per ${plantName}`);
       }
+      
+      // Rimuovi dalla persistenza
+      await Preferences.remove({ key: `reminder_${plantName}` });
     }
   } catch (error) {
     console.error('Error cancelling reminder:', error);
+  }
+}
+
+/**
+ * Ripristina tutti i reminder salvati all'avvio dell'app
+ */
+export async function restoreAllReminders() {
+  try {
+    if (!Capacitor.isNativePlatform()) return;
+
+    const { keys } = await Preferences.keys();
+    const reminderKeys = keys.filter(key => key.startsWith('reminder_'));
+
+    for (const key of reminderKeys) {
+      const stored = await Preferences.get({ key });
+      if (stored.value) {
+        const data = JSON.parse(stored.value);
+        const { notificationId, scheduledTime, plantName } = data;
+
+        // Se la notifica è ancora futura, ripristinala nella mappa
+        if (scheduledTime > Date.now()) {
+          activeReminders.set(plantName, notificationId);
+          console.log(`Reminder ripristinato per ${plantName}`);
+        } else {
+          // Rimuovi reminder scaduti
+          await Preferences.remove({ key });
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error restoring reminders:', error);
   }
 }
 

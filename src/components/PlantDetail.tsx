@@ -13,7 +13,7 @@ import {
 } from "@/lib/plantLogic";
 import { Droplets, Heart, MapPin, Calendar, Trash2, X, BarChart3, Bell, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   PieChart,
   Pie,
@@ -42,20 +42,29 @@ export function PlantDetail({
   onClose,
   onOpenAIDiagnosis,
 }: PlantDetailProps) {
-  // Ricalcola i valori quando plant o weather cambiano
-  const waterLevel = useMemo(() => getWaterLevel(plant), [plant]);
+  // Stato locale per aggiornamenti immediati
+  const [localPlant, setLocalPlant] = useState<Plant>(plant);
+
+  // Sincronizza lo stato locale quando la prop plant cambia
+  useEffect(() => {
+    setLocalPlant(plant);
+  }, [plant]);
+
+  // Ricalcola i valori quando localPlant o weather cambiano
+  const waterLevel = useMemo(() => getWaterLevel(localPlant), [localPlant]);
   const daysSinceWatered = useMemo(
-    () => Math.floor((Date.now() - new Date(plant.lastWatered).getTime()) / (1000 * 60 * 60 * 24)),
-    [plant.lastWatered]
+    () => Math.floor((Date.now() - new Date(localPlant.lastWatered).getTime()) / (1000 * 60 * 60 * 24)),
+    [localPlant.lastWatered]
   );
   const adjustedDays = useMemo(
-    () => (weather ? calculateAdjustedWateringDays(plant, weather) : plant.wateringDays),
-    [plant, weather]
+    () => (weather ? calculateAdjustedWateringDays(localPlant, weather) : localPlant.wateringDays),
+    [localPlant, weather]
   );
 
   const handleWater = () => {
-    const result = waterPlant(plant, weather);
-    onUpdate(plant.id, result.plant);
+    const result = waterPlant(localPlant, weather);
+    setLocalPlant(result.plant); // Aggiorna immediatamente lo stato locale
+    onUpdate(localPlant.id, result.plant); // Aggiorna anche il parent
     
     if (result.message.includes("⚠️")) {
       toast.warning(result.message);
@@ -64,11 +73,16 @@ export function PlantDetail({
     }
   };
 
+  const handleLocalUpdate = (plantId: string, updates: Partial<Plant>) => {
+    setLocalPlant(prev => ({ ...prev, ...updates })); // Aggiorna immediatamente lo stato locale
+    onUpdate(plantId, updates); // Aggiorna anche il parent
+  };
+
   const handleDelete = () => {
-    if (confirm(`Sei sicuro di voler rimuovere ${plant.name}?`)) {
-      onDelete(plant.id);
+    if (confirm(`Sei sicuro di voler rimuovere ${localPlant.name}?`)) {
+      onDelete(localPlant.id);
       onClose();
-      toast.success(`${plant.name} rimossa dal giardino`);
+      toast.success(`${localPlant.name} rimossa dal giardino`);
     }
   };
 
@@ -95,27 +109,27 @@ export function PlantDetail({
           <div className="pr-8">
             {/* Header */}
             <div className="flex items-start gap-4">
-              <div className="text-6xl">{plant.icon}</div>
+              <div className="text-6xl">{localPlant.icon}</div>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
-                  <h2 className="text-3xl font-bold">{plant.name}</h2>
-                  <Badge variant="secondary">{plant.category}</Badge>
+                  <h2 className="text-3xl font-bold">{localPlant.name}</h2>
+                  <Badge variant="secondary">{localPlant.category}</Badge>
                 </div>
-                <p className="text-muted-foreground mt-1">{plant.description}</p>
+                <p className="text-muted-foreground mt-1">{localPlant.description}</p>
                 <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
                   <MapPin className="h-4 w-4" />
-                  <span>{plant.position}</span>
+                  <span>{localPlant.position}</span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Image */}
-          {plant.imageUrl && (
+          {localPlant.imageUrl && (
             <div className="relative aspect-video overflow-hidden rounded-lg">
               <img
-                src={plant.imageUrl}
-                alt={plant.name}
+                src={localPlant.imageUrl}
+                alt={localPlant.name}
                 className="h-full w-full object-cover"
               />
             </div>
@@ -126,15 +140,15 @@ export function PlantDetail({
             <div>
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <Heart className={`h-5 w-5 ${getHealthColor(plant.health)}`} />
+                  <Heart className={`h-5 w-5 ${getHealthColor(localPlant.health)}`} />
                   <span className="font-semibold">Salute</span>
                 </div>
-                <span className={`text-2xl font-bold ${getHealthColor(plant.health)}`}>
-                  {plant.health}%
+                <span className={`text-2xl font-bold ${getHealthColor(localPlant.health)}`}>
+                  {localPlant.health}%
                 </span>
               </div>
-              <Progress value={plant.health} className="h-3" />
-              {plant.health < 40 && (
+              <Progress value={localPlant.health} className="h-3" />
+              {localPlant.health < 40 && (
                 <div className="bg-destructive/10 rounded-lg p-3 mt-2">
                   <p className="text-sm text-destructive font-medium">
                     ⚠️ La pianta sta soffrendo! Controlla acqua e condizioni.
@@ -227,10 +241,10 @@ export function PlantDetail({
                   <div className="flex-1">
                     <h3 className="font-semibold text-sm">Programmazione Irrigazione</h3>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Base: ogni {plant.wateringDays}{" "}
-                      {plant.wateringDays === 1 ? "giorno" : "giorni"}
+                      Base: ogni {localPlant.wateringDays}{" "}
+                      {localPlant.wateringDays === 1 ? "giorno" : "giorni"}
                     </p>
-                    {weather && adjustedDays !== plant.wateringDays && (
+                    {weather && adjustedDays !== localPlant.wateringDays && (
                       <p className="text-sm font-medium text-primary mt-1">
                         Adattato al meteo: ogni {adjustedDays}{" "}
                         {adjustedDays === 1 ? "giorno" : "giorni"}
@@ -246,35 +260,35 @@ export function PlantDetail({
               </Card>
 
               {/* Plant Preferences */}
-              {plant.preferences ? (
+              {localPlant.preferences ? (
                 <Card className="p-4">
                   <h3 className="font-semibold text-sm mb-3">Condizioni Ideali</h3>
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <p className="text-muted-foreground">Temperatura</p>
                       <p className="font-medium">
-                        {plant.preferences.minTemp}°C - {plant.preferences.maxTemp}°C
+                        {localPlant.preferences.minTemp}°C - {localPlant.preferences.maxTemp}°C
                       </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Umidità</p>
                       <p className="font-medium">
-                        {plant.preferences.minHumidity}% - {plant.preferences.maxHumidity}%
+                        {localPlant.preferences.minHumidity}% - {localPlant.preferences.maxHumidity}%
                       </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Esposizione</p>
                       <p className="font-medium capitalize">
-                        {plant.preferences.sunlight === "full"
+                        {localPlant.preferences.sunlight === "full"
                           ? "Sole pieno"
-                          : plant.preferences.sunlight === "partial"
+                          : localPlant.preferences.sunlight === "partial"
                           ? "Sole parziale"
                           : "Ombra"}
                       </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Categoria</p>
-                      <p className="font-medium capitalize">{plant.category}</p>
+                      <p className="font-medium capitalize">{localPlant.category}</p>
                     </div>
                   </div>
                 </Card>
@@ -283,7 +297,7 @@ export function PlantDetail({
                   <h3 className="font-semibold text-sm mb-3">Informazioni Pianta</h3>
                   <div className="text-sm">
                     <p className="text-muted-foreground">Categoria</p>
-                    <p className="font-medium capitalize">{plant.category}</p>
+                    <p className="font-medium capitalize">{localPlant.category}</p>
                   </div>
                 </Card>
               )}
@@ -305,11 +319,11 @@ export function PlantDetail({
             </TabsContent>
 
             <TabsContent value="stats" className="mt-6">
-              <PlantStats plant={plant} />
+              <PlantStats plant={localPlant} />
             </TabsContent>
 
             <TabsContent value="reminders" className="mt-6">
-              <ReminderSettings plant={plant} weather={weather} onUpdate={onUpdate} />
+              <ReminderSettings plant={localPlant} weather={weather} onUpdate={handleLocalUpdate} />
             </TabsContent>
           </Tabs>
         </div>

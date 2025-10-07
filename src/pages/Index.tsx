@@ -52,10 +52,10 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-40">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
+        <div className="container mx-auto px-8 py-10">
+          <div className="flex items-center justify-between mt-5">
             <div className="flex items-center gap-3">
-              <img src="dist/icon/ggb.png" alt="Contadino" className="h-10 w-10 rounded-lg"/>
+              <img src="icon/ggb.png" alt="Contadino" className="h-10 w-10 rounded-lg"/>
               <div>
                 <h1 className="text-2xl font-bold">Garden Buddy</h1>
                 <p className="text-sm text-muted-foreground">

@@ -228,7 +228,6 @@ const Index = () => {
           onClose={() => setSelectedPlant(null)}
           onOpenAIDiagnosis={() => {
             setPlantToDiagnose({ id: selectedPlant.id, name: selectedPlant.name });
-            setVisionMode("diagnose");
             setShowVisionModal(true);
             setSelectedPlant(null);
           }}
@@ -246,20 +245,20 @@ const Index = () => {
         />
       )}
 
-      <PlantVisionModal
-        open={showVisionModal}
-        onClose={() => {
-          setShowVisionModal(false);
-          setPlantToDiagnose(undefined);
-          setVisionMode("identify");
-        }}
-        mode={visionMode}
-        onAddPlant={addPlant}
-        plantToDiagnose={plantToDiagnose}
-        onUpdatePlantHealth={(plantId, health) => {
-          updatePlant(plantId, { health });
-        }}
-      />
+      {showVisionModal && (
+        <PlantVisionModal
+          open={showVisionModal}
+          mode={plantToDiagnose ? "diagnose" : "identify"}
+          onClose={() => {
+            setShowVisionModal(false);
+            setPlantToDiagnose(undefined);
+          }}
+          onAddPlant={addPlant}
+          plantToDiagnose={plantToDiagnose}
+          onUpdatePlantHealth={(plantId, health) => updatePlant(plantId, { health })}
+        />
+      )}
+
     </div>
   );
 };

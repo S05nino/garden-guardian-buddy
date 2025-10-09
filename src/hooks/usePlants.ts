@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
+import { Preferences } from "@capacitor/preferences";
 import { Plant, Weather } from "@/types/plant";
 import { updateHealthBasedOnWeather } from "@/lib/plantLogic";
 import { v4 as uuidv4 } from "uuid";
@@ -7,50 +8,59 @@ const STORAGE_KEY = "garden-plants";
 
 export function usePlants(weather: Weather | null) {
   const [plants, setPlants] = useState<Plant[]>([]);
-  const [loaded, setLoaded] = useState(false); // ✅ indica se i dati sono caricati da localStorage
-  const hasAppliedWeather = useRef(false); // evita doppia applicazione al primo render
+  const [loaded, setLoaded] = useState(false);
 
-  // 🪴 Carica piante da localStorage al primo render
+  // 🪴 Carica piante da Capacitor Preferences al primo render
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          setPlants(parsed);
-        } else {
-          console.warn("Dati piante non validi in localStorage. Resetto lo storage.");
-          localStorage.removeItem(STORAGE_KEY);
+    const loadPlants = async () => {
+      try {
+        const { value } = await Preferences.get({ key: STORAGE_KEY });
+        if (value) {
+          const parsed = JSON.parse(value);
+          if (Array.isArray(parsed)) {
+            setPlants(parsed);
+          } else {
+            console.warn("Dati piante non validi, reset dello storage...");
+            await Preferences.remove({ key: STORAGE_KEY });
+          }
         }
+      } catch (error) {
+        console.error("Errore durante il caricamento delle piante:", error);
+        await Preferences.remove({ key: STORAGE_KEY });
+      } finally {
+        setLoaded(true);
       }
-    } catch (error) {
-      console.error("Errore durante il caricamento delle piante:", error);
-      localStorage.removeItem(STORAGE_KEY);
-    } finally {
-      setLoaded(true);
-    }
+    };
+
+    loadPlants();
   }, []);
 
-  // 💾 Salva su localStorage ogni volta che cambia plants (ma solo dopo il primo caricamento)
+  // 💾 Salva SEMPRE su Preferences quando cambia lo stato (dopo caricamento)
   useEffect(() => {
-    if (loaded) {
+    if (!loaded) return; // Evita di sovrascrivere prima del primo caricamento
+
+    const savePlants = async () => {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(plants));
+        await Preferences.set({
+          key: STORAGE_KEY,
+          value: JSON.stringify(plants),
+        });
       } catch (error) {
         console.error("Errore nel salvataggio delle piante:", error);
       }
-    }
+    };
+
+    savePlants();
   }, [plants, loaded]);
 
-  // 🌦️ Aggiorna salute in base al meteo, ma solo dopo caricamento iniziale
+  // 🌦️ Aggiorna automaticamente la salute delle piante in base al meteo
   useEffect(() => {
-    if (weather && loaded && plants.length > 0 && !hasAppliedWeather.current) {
+    if (weather && plants.length > 0) {
       setPlants((prev) =>
         prev.map((plant) => updateHealthBasedOnWeather(plant, weather))
       );
-      hasAppliedWeather.current = true;
     }
-  }, [weather, loaded]);
+  }, [weather]);
 
   // ➕ Aggiunge una nuova pianta
   const addPlant = (plant: Plant) => {
@@ -61,17 +71,18 @@ export function usePlants(weather: Weather | null) {
       createdAt: plant.createdAt || new Date().toISOString(),
       totalWaterings: plant.totalWaterings || 0,
     };
+
     setPlants((prev) => [...prev, completePlant]);
   };
 
-  // 🔄 Aggiorna pianta
+  // 🔄 Aggiorna i dati di una pianta
   const updatePlant = (plantId: string, updates: Partial<Plant>) => {
     setPlants((prev) =>
       prev.map((p) => (p.id === plantId ? { ...p, ...updates } : p))
     );
   };
 
-  // ❌ Rimuove pianta
+  // ❌ Rimuove una pianta dal giardino
   const removePlant = (plantId: string) => {
     setPlants((prev) => prev.filter((p) => p.id !== plantId));
   };

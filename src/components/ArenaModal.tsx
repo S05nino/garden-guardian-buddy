@@ -138,7 +138,31 @@ export const ArenaModal = ({ open, onClose, plants }: ArenaModalProps) => {
   const endBattle = (victor: string) => {
     setWinner(victor);
     toast.success(`${victor} ha vinto la battaglia!`);
+
+    // Aggiorna vittorie/sconfitte
+    if (playerPlant && enemyPlant) {
+      const updatedPlants = plants.map((p) => {
+        if (p.id === playerPlant.id) {
+          return {
+            ...p,
+            victories: victor === playerPlant.name ? (p.victories || 0) + 1 : p.victories || 0,
+            defeats: victor !== playerPlant.name ? (p.defeats || 0) + 1 : p.defeats || 0,
+          };
+        }
+        if (p.id === enemyPlant.id) {
+          return {
+            ...p,
+            victories: victor === enemyPlant.name ? (p.victories || 0) + 1 : p.victories || 0,
+            defeats: victor !== enemyPlant.name ? (p.defeats || 0) + 1 : p.defeats || 0,
+          };
+        }
+        return p;
+      });
+      // Aggiorna lo stato genitore se necessario
+      // setPlants(updatedPlants) oppure chiama un callback da Index.tsx
+    }
   };
+
 
   const nextTurn = (playerMove: Move) => {
     if (!playerPlant || !enemyPlant) return;

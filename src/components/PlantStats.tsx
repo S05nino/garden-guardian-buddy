@@ -62,6 +62,21 @@ export function PlantStats({ plant }: PlantStatsProps) {
       unit: plant.health >= avgHealth ? "Miglioramento" : "Attenzione",
       color: plant.health >= avgHealth ? "text-primary" : "text-destructive",
     },
+    // Statistiche battaglia
+    {
+      icon: Heart, // puoi usare un'icona diversa se vuoi
+      label: "Vittorie in arena",
+      value: plant.victories || 0,
+      unit: "vittorie",
+      color: "text-green-600",
+    },
+    {
+      icon: Heart, // o un'altra icona tipo "💀" per sconfitte
+      label: "Sconfitte in arena",
+      value: plant.defeats || 0,
+      unit: "sconfitte",
+      color: "text-red-600",
+    },
   ];
 
   return (

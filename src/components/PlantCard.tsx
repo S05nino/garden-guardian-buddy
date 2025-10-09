@@ -53,6 +53,7 @@ export function PlantCard({ plant, weather, onClick }: PlantCardProps) {
         </div>
 
         <div className="space-y-2">
+          {/* Salute */}
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-1">
               <Heart className={`h-4 w-4 ${getHealthColor(plant.health)}`} />
@@ -64,6 +65,7 @@ export function PlantCard({ plant, weather, onClick }: PlantCardProps) {
           </div>
           <Progress value={plant.health} className="h-2" />
 
+          {/* Acqua */}
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-1">
               <Droplets className="h-4 w-4 text-accent" />
@@ -74,6 +76,16 @@ export function PlantCard({ plant, weather, onClick }: PlantCardProps) {
             </span>
           </div>
           <Progress value={waterLevel * 100} className="h-2 [&>div]:bg-accent" />
+
+          {/* Vittorie / Sconfitte */}
+          <div className="flex items-center justify-between text-sm mt-2">
+            <span className="text-muted-foreground flex items-center gap-1">
+              🏆 {plant.victories || 0}
+            </span>
+            <span className="text-muted-foreground flex items-center gap-1">
+              💀 {plant.defeats || 0}
+            </span>
+          </div>
         </div>
       </div>
     </Card>

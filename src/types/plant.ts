@@ -29,6 +29,9 @@ export interface Plant {
   createdAt: string;
   totalWaterings: number;
   remindersEnabled?: boolean;
+  // Aggiunte proprietà per Arena
+  victories?: number;
+  defeats?: number;
 }
 
 export interface Weather {

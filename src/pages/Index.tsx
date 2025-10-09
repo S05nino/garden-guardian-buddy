@@ -4,6 +4,7 @@ import { WeatherWidget } from "@/components/WeatherWidget";
 import { PlantCard } from "@/components/PlantCard";
 import { PlantDetail } from "@/components/PlantDetail";
 import { AddPlantModal } from "@/components/AddPlantModal";
+import { ArenaModal } from "@/components/ArenaModal";
 import { PlantVisionModal } from "@/components/PlantVisionModal";
 import { useWeather } from "@/hooks/useWeather";
 import { usePlants } from "@/hooks/usePlants";
@@ -29,6 +30,7 @@ const Index = () => {
   const [plantToDiagnose, setPlantToDiagnose] = useState<{ id: string; name: string } | undefined>(undefined);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [visionMode, setVisionMode] = useState<"identify" | "diagnose">("identify");
+  const [showArenaModal, setShowArenaModal] = useState(false);
 
   // Check for plants that need water and show notifications
   useEffect(() => {
@@ -63,7 +65,7 @@ const Index = () => {
                 </p>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm">
@@ -90,7 +92,9 @@ const Index = () => {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-
+              <Button variant="outline" size="sm" onClick={() => setShowArenaModal(true)}>
+                ⚔️ Arena
+              </Button>
             </div>
           </div>
         </div>
@@ -233,6 +237,13 @@ const Index = () => {
 
       {showAddModal && (
         <AddPlantModal onAdd={addPlant} onClose={() => setShowAddModal(false)} />
+      )}
+      {showArenaModal && (
+        <ArenaModal 
+          open={showArenaModal}
+          onClose={() => setShowArenaModal(false)}
+          plants={plants}
+        />
       )}
 
       <PlantVisionModal

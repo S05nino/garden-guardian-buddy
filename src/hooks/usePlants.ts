@@ -70,6 +70,8 @@ export function usePlants(weather: Weather | null) {
       wateringHistory: plant.wateringHistory || [],
       createdAt: plant.createdAt || new Date().toISOString(),
       totalWaterings: plant.totalWaterings || 0,
+      victories: plant.victories || 0,
+      defeats: plant.defeats || 0,
     };
 
     setPlants((prev) => [...prev, completePlant]);
@@ -87,10 +89,26 @@ export function usePlants(weather: Weather | null) {
     setPlants((prev) => prev.filter((p) => p.id !== plantId));
   };
 
+  // ⚔️ Registra il risultato di una battaglia
+  const recordBattleResult = (winnerId: string, loserId: string) => {
+    setPlants((prev) =>
+      prev.map((p) => {
+        if (p.id === winnerId) {
+          return { ...p, victories: (p.victories || 0) + 1 };
+        }
+        if (p.id === loserId) {
+          return { ...p, defeats: (p.defeats || 0) + 1 };
+        }
+        return p;
+      })
+    );
+  };
+
   return {
     plants,
     addPlant,
     updatePlant,
     removePlant,
+    recordBattleResult,
   };
 }

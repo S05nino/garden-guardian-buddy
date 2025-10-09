@@ -76,16 +76,6 @@ export function PlantCard({ plant, weather, onClick }: PlantCardProps) {
             </span>
           </div>
           <Progress value={waterLevel * 100} className="h-2 [&>div]:bg-accent" />
-
-          {/* Vittorie / Sconfitte */}
-          <div className="flex items-center justify-between text-sm mt-2">
-            <span className="text-muted-foreground flex items-center gap-1">
-              🏆 {plant.victories || 0}
-            </span>
-            <span className="text-muted-foreground flex items-center gap-1">
-              💀 {plant.defeats || 0}
-            </span>
-          </div>
         </div>
       </div>
     </Card>

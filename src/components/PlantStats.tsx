@@ -1,7 +1,7 @@
 import { Plant } from "@/types/plant";
 import { Card } from "@/components/ui/card";
 import { getDaysAlive, getAverageHealth } from "@/lib/plantLogic";
-import { Calendar, Droplets, Heart, TrendingUp } from "lucide-react";
+import { Calendar, Droplets, Heart, SkullIcon, TrendingUp, Trophy } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { Skeleton } from "./ui/skeleton";
 
 interface PlantStatsProps {
   plant: Plant;
@@ -64,14 +65,14 @@ export function PlantStats({ plant }: PlantStatsProps) {
     },
     // Statistiche battaglia
     {
-      icon: Heart, // puoi usare un'icona diversa se vuoi
+      icon: Trophy,
       label: "Vittorie in arena",
       value: plant.victories || 0,
       unit: "vittorie",
       color: "text-green-600",
     },
     {
-      icon: Heart, // o un'altra icona tipo "💀" per sconfitte
+      icon: SkullIcon,
       label: "Sconfitte in arena",
       value: plant.defeats || 0,
       unit: "sconfitte",

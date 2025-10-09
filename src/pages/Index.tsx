@@ -242,6 +242,7 @@ const Index = () => {
           open={showArenaModal}
           onClose={() => setShowArenaModal(false)}
           plants={plants}
+          updatePlant={updatePlant}
         />
       )}
 

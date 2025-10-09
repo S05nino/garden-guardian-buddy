@@ -30,9 +30,10 @@ interface ArenaModalProps {
   open: boolean;
   onClose: () => void;
   plants: any[];
+  updatePlant: (plantId: string, updates: Partial<any>) => void; // 👈 aggiunta
 }
 
-export const ArenaModal = ({ open, onClose, plants }: ArenaModalProps) => {
+export const ArenaModal = ({ open, onClose, plants, updatePlant }: ArenaModalProps) => {
   const [battleStarted, setBattleStarted] = useState(false);
   const [preparingBattle, setPreparingBattle] = useState<{
     player: BattlePlant;
@@ -72,12 +73,15 @@ export const ArenaModal = ({ open, onClose, plants }: ArenaModalProps) => {
 
     if (move.type === "attack") {
       if (attacker.attackEnergy < (move.cost || 0)) {
-        log = `${attacker.name} non ha abbastanza energia per ${move.name}! Deve difendersi o curarsi.`;
+        log = `${attacker.name} non ha abbastanza energia per ${move.name}!`;
       } else {
         const baseDamage = Math.round(
           move.power * (attacker.attackStat / 10) * (attacker.health / attacker.maxHealth)
         );
-        const actualDamage = defender.defenseBuff ? Math.round(baseDamage * (1 - defender.defenseBuff)) : baseDamage;
+        const actualDamage = defender.defenseBuff
+          ? Math.round(baseDamage * (1 - defender.defenseBuff))
+          : baseDamage;
+
         newDefender.health = Math.max(0, defender.health - actualDamage);
         newAttacker.attackEnergy = Math.max(0, newAttacker.attackEnergy - (move.cost || 0));
         log = `${attacker.name} usa ${move.name}! -${actualDamage} HP`;
@@ -139,30 +143,19 @@ export const ArenaModal = ({ open, onClose, plants }: ArenaModalProps) => {
     setWinner(victor);
     toast.success(`${victor} ha vinto la battaglia!`);
 
-    // Aggiorna vittorie/sconfitte
-    if (playerPlant && enemyPlant) {
-      const updatedPlants = plants.map((p) => {
-        if (p.id === playerPlant.id) {
-          return {
-            ...p,
-            victories: victor === playerPlant.name ? (p.victories || 0) + 1 : p.victories || 0,
-            defeats: victor !== playerPlant.name ? (p.defeats || 0) + 1 : p.defeats || 0,
-          };
-        }
-        if (p.id === enemyPlant.id) {
-          return {
-            ...p,
-            victories: victor === enemyPlant.name ? (p.victories || 0) + 1 : p.victories || 0,
-            defeats: victor !== enemyPlant.name ? (p.defeats || 0) + 1 : p.defeats || 0,
-          };
-        }
-        return p;
-      });
-      // Aggiorna lo stato genitore se necessario
-      // setPlants(updatedPlants) oppure chiama un callback da Index.tsx
+    // ✅ Aggiorna statistiche pianta locale + storage
+    if (playerPlant) {
+      if (victor === playerPlant.name) {
+        updatePlant(playerPlant.id, {
+          victories: (plants.find(p => p.id === playerPlant.id)?.victories || 0) + 1,
+        });
+      } else {
+        updatePlant(playerPlant.id, {
+          defeats: (plants.find(p => p.id === playerPlant.id)?.defeats || 0) + 1,
+        });
+      }
     }
   };
-
 
   const nextTurn = (playerMove: Move) => {
     if (!playerPlant || !enemyPlant) return;
@@ -187,7 +180,6 @@ export const ArenaModal = ({ open, onClose, plants }: ArenaModalProps) => {
       newEnemy2.defenseBuff = 0;
       setPlayerPlant(newPlayer2);
       setEnemyPlant(newEnemy2);
-
       setTurnLog(enemyLog);
 
       if (newPlayer2.health <= 0) {
@@ -229,6 +221,9 @@ export const ArenaModal = ({ open, onClose, plants }: ArenaModalProps) => {
                         <Leaf className="h-10 w-10 text-muted-foreground mb-2" />
                       )}
                       <p className="font-medium">{p.name}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        🏆 {p.victories || 0} | 💀 {p.defeats || 0}
+                      </p>
                     </div>
                   </Card>
                 ))}
@@ -237,7 +232,7 @@ export const ArenaModal = ({ open, onClose, plants }: ArenaModalProps) => {
             </div>
           )}
 
-          {/* Fase preparatoria */}
+          {/* Preparazione */}
           {preparingBattle && (
             <div className="text-center space-y-6">
               <h2 className="text-lg font-semibold">Preparati alla battaglia!</h2>

@@ -127,16 +127,47 @@ export function PlantVisionModal({ open, onClose, mode: propMode, onAddPlant, pl
     }
   };
 
+  const normalizeCategory = (category: string): string => {
+    if (!category) return "other";
+    const c = category.toLowerCase();
+
+    if (c.includes("herb") || c.includes("erba")) return "herbs";
+    if (c.includes("succulent") || c.includes("succulente")) return "succulents";
+    if (c.includes("flower") || c.includes("fiore")) return "flowers";
+    if (c.includes("vegetable") || c.includes("ortaggio") || c.includes("verdura")) return "vegetables";
+    if (c.includes("indoor") || c.includes("casa") || c.includes("interno")) return "indoor";
+    
+    return "other";
+  };
+
+  const getCategoryIcon = (category: string): string => {
+    switch (category) {
+      case "herbs":
+        return "🌿";
+      case "succulents":
+        return "🌵";
+      case "flowers":
+        return "🌸";
+      case "vegetables":
+        return "🥦";
+      case "indoor":
+        return "🪴";
+      default:
+        return "🌱";
+    }
+  };
+
   const handleAddToGarden = () => {
     if (result && onAddPlant) {
+      const normalizedCategory = normalizeCategory(result.category);
       const plantData = {
         name: result.name,
         description: result.description,
-        category: result.category,
+        category: normalizedCategory,
         position: result.position,
         wateringDays: result.wateringDays,
         preferences: result.preferences,
-        icon: "🌿",
+        icon: getCategoryIcon(normalizedCategory),
         imageUrl: image || undefined,
         health: result.initialHealth || 100,
       };

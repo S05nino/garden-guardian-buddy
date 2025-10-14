@@ -52,10 +52,12 @@ export function PlantDetail({
 
   // Ricalcola i valori quando localPlant o weather cambiano
   const waterLevel = useMemo(() => getWaterLevel(localPlant), [localPlant]);
-  const daysSinceWatered = useMemo(
-    () => Math.floor((Date.now() - new Date(localPlant.lastWatered).getTime()) / (1000 * 60 * 60 * 24)),
-    [localPlant.lastWatered]
-  );
+  const daysSinceWatered = useMemo(() => {
+    if (!localPlant.lastWatered) return null;
+    const diff = Date.now() - new Date(localPlant.lastWatered).getTime();
+    return Math.floor(diff / (1000 * 60 * 60 * 24));
+  }, [localPlant.lastWatered]);
+
   const adjustedDays = useMemo(
     () => (weather ? calculateAdjustedWateringDays(localPlant, weather) : localPlant.wateringDays),
     [localPlant, weather]
@@ -208,7 +210,9 @@ export function PlantDetail({
                   </span>
                 </div>
                 <span className="font-medium">
-                  {daysSinceWatered === 0
+                  {daysSinceWatered == null
+                    ? "Oggi"
+                    : daysSinceWatered === 0
                     ? "Oggi"
                     : `${daysSinceWatered} ${daysSinceWatered === 1 ? "giorno" : "giorni"} fa`}
                 </span>

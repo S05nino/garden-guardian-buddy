@@ -82,45 +82,90 @@ export function PlantVisionModal({ open, onClose, mode: propMode, onAddPlant, pl
     setResult(null);
 
     try {
-      console.log('Analyzing image with mode:', mode);
-      
-      const { data, error } = await supabase.functions.invoke('plant-vision', {
-        body: { image, mode }
+      console.log("Analyzing image with mode:", mode);
+
+      const { data, error } = await supabase.functions.invoke("plant-vision", {
+        body: { image, mode },
       });
 
       if (error) {
-        console.error('Function error:', error);
+        console.error("Function error:", error);
         throw error;
       }
 
-      console.log('Analysis result:', data);
-      setResult(data);
+      console.log("Analysis result:", data);
 
-      if (mode === 'identify') {
-        toast.success("Pianta identificata! 🌱", {
-          description: data.name
-        });
+      // ✅ Liste di parole chiave per il controllo
+      const plantKeywords = [
+        "plant", "flower", "leaf", "tree", "bush", "herb",
+        "succulent", "grass", "seedling", "cactus", "fern",
+        "bonsai", "orchid", "rose", "tulip", "shrub", "ivy"
+      ];
+
+      const nonPlantKeywords = [
+        "animal", "cat", "dog", "bird", "person", "human", "face",
+        "car", "vehicle", "computer", "phone", "object", "building",
+        "chair", "table", "food", "house", "sky", "cloud", "toy"
+      ];
+
+      const name = data?.name?.toLowerCase() || "";
+      const category = data?.category?.toLowerCase() || "";
+
+      // 🔎 Logica avanzata per decidere se è una pianta
+      const containsPlantWord = plantKeywords.some((w) =>
+        name.includes(w) || category.includes(w)
+      );
+      const containsNonPlantWord = nonPlantKeywords.some((w) =>
+        name.includes(w) || category.includes(w)
+      );
+
+      // Condizione finale
+      const isPlant =
+        containsPlantWord &&
+        !containsNonPlantWord &&
+        !/unknown|object|undefined|non\s*plant|thing/i.test(name + category);
+
+      console.log("🪴 IsPlant:", isPlant, "— name:", name, "category:", category);
+
+      // 🔹 Salva il risultato nel componente
+      setResult({ ...data, isPlant });
+
+      if (mode === "identify") {
+        if (isPlant) {
+          toast.success("Pianta identificata! 🌱", {
+            description: data.name,
+          });
+        } else {
+          toast.error("Nessuna pianta rilevata ❌", {
+            description:
+              "L'immagine sembra contenere un oggetto o un animale, non una pianta.",
+          });
+        }
       } else {
         toast.success("Analisi completata! 🔍");
-        
+
         // Se stiamo diagnosticando una pianta specifica, aggiorna la salute
         if (plantToDiagnose && onUpdatePlantHealth && data.overallHealth) {
           const healthMap = {
-            'healthy': 100,
-            'fair': 60,
-            'poor': 30
+            healthy: 100,
+            fair: 60,
+            poor: 30,
           };
-          const newHealth = healthMap[data.overallHealth as keyof typeof healthMap] || 50;
+          const newHealth =
+            healthMap[data.overallHealth as keyof typeof healthMap] || 50;
           onUpdatePlantHealth(plantToDiagnose.id, newHealth);
-          toast.success(`Salute di ${plantToDiagnose.name} aggiornata a ${newHealth}%`, {
-            description: "Basata sull'analisi AI"
-          });
+          toast.success(
+            `Salute di ${plantToDiagnose.name} aggiornata a ${newHealth}%`,
+            {
+              description: "Basata sull'analisi AI",
+            }
+          );
         }
       }
     } catch (error) {
-      console.error('Error analyzing image:', error);
+      console.error("Error analyzing image:", error);
       toast.error("Errore durante l'analisi", {
-        description: error instanceof Error ? error.message : "Riprova"
+        description: error instanceof Error ? error.message : "Riprova",
       });
     } finally {
       setAnalyzing(false);
@@ -347,11 +392,23 @@ export function PlantVisionModal({ open, onClose, mode: propMode, onAddPlant, pl
                       )}
 
                       <div className="flex gap-3 pt-2">
-                        <Button onClick={handleAddToGarden} className="flex-1">
-                          <CheckCircle className="mr-2 h-4 w-4" />
-                          Aggiungi al Giardino
-                        </Button>
-                        <Button variant="outline" onClick={() => { setImage(null); setResult(null); }}>
+                        {result.isPlant ? (
+                          <Button onClick={handleAddToGarden} className="flex-1">
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                            Aggiungi al Giardino
+                          </Button>
+                        ) : (
+                          <div className="flex-1 text-center text-muted-foreground py-2 border rounded-lg">
+                            Nessuna pianta rilevata 🌫️
+                          </div>
+                        )}
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setImage(null);
+                            setResult(null);
+                          }}
+                        >
                           Nuova Analisi
                         </Button>
                       </div>

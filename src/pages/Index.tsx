@@ -10,16 +10,8 @@ import { useWeather } from "@/hooks/useWeather";
 import { usePlants } from "@/hooks/usePlants";
 import { Plant } from "@/types/plant";
 import { Plus, Leaf, Sparkles } from "lucide-react";
-import { FaPersonDigging } from "react-icons/fa6";
 import { toast } from "sonner";
 import { shouldWater } from "@/lib/plantLogic";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
 
 const Index = () => {
   const { weather, loading: weatherLoading, refetch } = useWeather();
@@ -64,37 +56,6 @@ const Index = () => {
                   {plants.length} {plants.length === 1 ? "pianta" : "piante"} nel tuo giardino
                 </p>
               </div>
-            </div>
-            <div className="flex flex-col gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Plus className="mr-2 h-5 w-5" />
-                    Aggiungi
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={() => setShowAddModal(true)}
-                    className="cursor-pointer"
-                  >
-                    ➕ Aggiungi manualmente
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setVisionMode("identify");
-                      setPlantToDiagnose(undefined);
-                      setShowVisionModal(true);
-                    }}
-                    className="cursor-pointer"
-                  >
-                    ✨ Identifica con AI
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Button variant="outline" size="sm" onClick={() => setShowArenaModal(true)}>
-                ⚔️ Arena
-              </Button>
             </div>
           </div>
         </div>
@@ -260,6 +221,39 @@ const Index = () => {
         />
       )}
 
+      {/* Bottom Tab Bar (solo mobile) */}
+      <nav className="fixed bottom-0 left-0 right-0 border-t bg-card/80 backdrop-blur-md flex justify-around items-center py-3 sm:hidden">
+        {/* Aggiungi manualmente */}
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="flex flex-col items-center text-sm text-muted-foreground hover:text-foreground transition"
+        >
+          <Plus className="h-5 w-5 mb-1" />
+          <span>Aggiungi</span>
+        </button>
+
+        {/* Aggiungi/Diagnostica con AI */}
+        <button
+          onClick={() => {
+            setVisionMode("identify");
+            setPlantToDiagnose(undefined);
+            setShowVisionModal(true);
+          }}
+          className="flex flex-col items-center text-sm text-muted-foreground hover:text-foreground transition"
+        >
+          <Sparkles className="h-5 w-5 mb-1" />
+          <span>AI Plant Doctor</span>
+        </button>
+
+        {/* Arena */}
+        <button
+          onClick={() => setShowArenaModal(true)}
+          className="flex flex-col items-center text-sm text-muted-foreground hover:text-foreground transition"
+        >
+          ⚔️
+          <span>Arena</span>
+        </button>
+      </nav>
     </div>
   );
 };

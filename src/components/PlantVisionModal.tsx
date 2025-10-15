@@ -205,19 +205,25 @@ export function PlantVisionModal({ open, onClose, mode: propMode, onAddPlant, pl
   const handleAddToGarden = () => {
     if (result && onAddPlant) {
       const normalizedCategory = normalizeCategory(result.category);
+
+      // 🔹 Forza wateringDays a minimo 1
+      const safeWateringDays = Math.max(result.wateringDays || 1, 1);
+
       const plantData = {
         name: result.name,
         description: result.description,
         category: normalizedCategory,
         position: result.position,
-        wateringDays: result.wateringDays,
+        wateringDays: safeWateringDays,
         preferences: result.preferences,
         icon: getCategoryIcon(normalizedCategory),
         imageUrl: image || undefined,
         health: result.initialHealth || 100,
       };
       onAddPlant(plantData);
-      toast.success(`${result.name} aggiunta al giardino! 🌱 Salute iniziale: ${result.initialHealth || 100}%`);
+      toast.success(
+        `${result.name} aggiunta al giardino! 🌱 Salute iniziale: ${result.initialHealth || 100}%`
+      );
       handleClose();
     }
   };
@@ -399,7 +405,7 @@ export function PlantVisionModal({ open, onClose, mode: propMode, onAddPlant, pl
                           </Button>
                         ) : (
                           <div className="flex-1 text-center text-muted-foreground py-2 border rounded-lg">
-                            Nessuna pianta rilevata 🌫️
+                            Nessuna pianta rilevata ❌
                           </div>
                         )}
                         <Button

@@ -123,6 +123,22 @@ export const ArenaModal = ({ open, onClose, plants, updatePlant }: ArenaModalPro
     return 0;                           // resto neutro
   };
 
+  const getPlantRank = (plant) => {
+    const victories = plant.victories || 0;
+    const defeats = plant.defeats || 0;
+    const total = victories + defeats;
+
+    if (total === 0) return { emoji: "🌱", label: "Seme" };
+
+    const winRate = (victories / total) * 100;
+
+    if (winRate >= 75) return { emoji: "🥇", label: "Oro" };
+    if (winRate >= 60) return { emoji: "🥈", label: "Argento" };
+    if (winRate >= 40) return { emoji: "🥉", label: "Bronzo" };
+    if (winRate >= 20) return { emoji: "🪵", label: "Legno" };
+    return { emoji: "🌱", label: "Seme" };
+  };
+
   /**
    * 🔹 Statistiche base dinamiche (attack / defense)
    * restituite come numeri "grezzi" che poi useremo nella formula del danno
@@ -330,29 +346,69 @@ export const ArenaModal = ({ open, onClose, plants, updatePlant }: ArenaModalPro
           {/* Selezione pianta */}
           {!battleStarted && !preparingBattle && (
             <div className="space-y-4">
-              <p className="text-muted-foreground text-sm">Scegli una delle tue piante per combattere:</p>
+              <p className="text-muted-foreground text-sm">
+                Scegli una delle tue piante per combattere:
+              </p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {plants.map((p) => (
-                  <Card
-                    key={p.id}
-                    className="p-3 cursor-pointer hover:border-primary transition"
-                    onClick={() => prepareBattle(p)}
-                  >
-                    <div className="flex flex-col items-center text-center">
-                      {p.imageUrl ? (
-                        <img src={p.imageUrl} alt={p.name} className="w-20 h-20 object-cover rounded-full mb-2" />
-                      ) : (
-                        <Leaf className="h-10 w-10 text-muted-foreground mb-2" />
-                      )}
-                      <p className="font-medium">{p.name}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        🏆 {p.victories || 0} | 💀 {p.defeats || 0}
-                      </p>
-                    </div>
-                  </Card>
-                ))}
+                {[...plants]
+                  .sort((a, b) => {
+                    const aVictories = a.victories || 0;
+                    const bVictories = b.victories || 0;
+                    const aDefeats = a.defeats || 0;
+                    const bDefeats = b.defeats || 0;
+
+                    if (bVictories !== aVictories) return bVictories - aVictories;
+                    if (aDefeats !== bDefeats) return aDefeats - bDefeats;
+                    return a.name.localeCompare(b.name);
+                  })
+                  .map((p) => {
+                    // 🔹 Calcolo rank e emoji
+                    const totalBattles = (p.victories || 0) + (p.defeats || 0);
+                    const winRate =
+                      totalBattles > 0
+                        ? Math.round((p.victories / totalBattles) * 100)
+                        : 0;
+
+                    let color = "text-muted-foreground";
+
+                    if (winRate >= 75) {
+                      color = "text-yellow-400";
+                    } else if (winRate >= 60) {
+                      color = "text-gray-300";
+                    } else if (winRate >= 40) {
+                      color = "text-amber-700";
+                    } else if (winRate >= 20) {
+                      color = "text-orange-600";
+                    }
+
+                    return (
+                      <Card
+                        key={p.id}
+                        className="p-3 cursor-pointer hover:border-primary transition"
+                        onClick={() => prepareBattle(p)}
+                      >
+                        <div className="flex flex-col items-center text-center">
+                          {p.imageUrl ? (
+                            <img
+                              src={p.imageUrl}
+                              alt={p.name}
+                              className="w-20 h-20 object-cover rounded-full mb-2"
+                            />
+                          ) : (
+                            <Leaf className="h-10 w-10 text-muted-foreground mb-2" />
+                          )}
+                          <p className="font-medium">{p.name}</p>
+                          <p className={`text-xs mt-1 ${color}`}>
+                            🏆 {p.victories || 0} | 💀 {p.defeats || 0}
+                          </p>
+                        </div>
+                      </Card>
+                    );
+                  })}
               </div>
-              <Button variant="outline" className="mt-4" onClick={onClose}>Chiudi</Button>
+              <Button variant="outline" className="mt-4" onClick={onClose}>
+                Chiudi
+              </Button>
             </div>
           )}
 

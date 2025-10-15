@@ -1,7 +1,22 @@
 import { Plant } from "@/types/plant";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { getDaysAlive, getAverageHealth } from "@/lib/plantLogic";
-import { Calendar, Droplets, Heart, SkullIcon, TrendingUp, Trophy } from "lucide-react";
+import {
+  Calendar,
+  Droplets,
+  Heart,
+  SkullIcon,
+  TrendingUp,
+  Trophy,
+  Medal,
+  Info,
+} from "lucide-react";
 import {
   LineChart,
   Line,
@@ -15,7 +30,6 @@ import {
 } from "recharts";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { Skeleton } from "./ui/skeleton";
 
 interface PlantStatsProps {
   plant: Plant;
@@ -25,8 +39,8 @@ export function PlantStats({ plant }: PlantStatsProps) {
   const daysAlive = getDaysAlive(plant);
   const avgHealth = getAverageHealth(plant);
 
-  // Prepara dati per grafico storico (solo se wateringHistory esiste)
-  const historyData = plant.wateringHistory 
+  // Dati per i grafici
+  const historyData = plant.wateringHistory
     ? plant.wateringHistory.slice(-15).map((h) => ({
         date: format(new Date(h.date), "dd/MM", { locale: it }),
         acqua: Math.round(h.waterLevel * 100),
@@ -34,6 +48,30 @@ export function PlantStats({ plant }: PlantStatsProps) {
       }))
     : [];
 
+  // Calcolo battaglie
+  const totalBattles = (plant.victories || 0) + (plant.defeats || 0);
+  const winRate =
+    totalBattles > 0 ? Math.round((plant.victories / totalBattles) * 100) : 0;
+
+  // 🔹 Sistema Rank a 5 livelli
+  let rank = "Seme";
+  let rankColor = "text-muted-foreground";
+
+  if (winRate >= 75) {
+    rank = "Oro";
+    rankColor = "text-yellow-500";
+  } else if (winRate >= 60) {
+    rank = "Argento";
+    rankColor = "text-gray-400";
+  } else if (winRate >= 40) {
+    rank = "Bronzo";
+    rankColor = "text-amber-700";
+  } else if (winRate >= 20) {
+    rank = "Legno";
+    rankColor = "text-orange-600";
+  }
+
+  // 🔹 Statistiche principali
   const stats = [
     {
       icon: Calendar,
@@ -63,7 +101,6 @@ export function PlantStats({ plant }: PlantStatsProps) {
       unit: plant.health >= avgHealth ? "Miglioramento" : "Attenzione",
       color: plant.health >= avgHealth ? "text-primary" : "text-destructive",
     },
-    // Statistiche battaglia
     {
       icon: Trophy,
       label: "Vittorie in arena",
@@ -78,6 +115,21 @@ export function PlantStats({ plant }: PlantStatsProps) {
       unit: "sconfitte",
       color: "text-red-600",
     },
+    {
+      icon: TrendingUp,
+      label: "Tasso di vittoria",
+      value: winRate,
+      unit: "%",
+      color: "text-green-500",
+    },
+    {
+      icon: Medal,
+      label: "Rank",
+      value: `${rank}`,
+      unit: "",
+      color: rankColor,
+      hasInfo: true, // 👈 Aggiungiamo un flag per mostrare il popover
+    },
   ];
 
   return (
@@ -87,7 +139,36 @@ export function PlantStats({ plant }: PlantStatsProps) {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 gap-3">
         {stats.map((stat, index) => (
-          <Card key={index} className="p-4">
+          <Card key={index} className="p-4 relative">
+            {/* Info Popover solo nel riquadro Rank */}
+            {stat.hasInfo && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="absolute top-2 right-2 h-5 w-5 text-muted-foreground hover:text-foreground"
+                  >
+                    <Info className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  side="top"
+                  align="end"
+                  className="text-xs space-y-1 w-56"
+                >
+                  <p className="font-semibold text-sm mb-1">
+                    ⚠️ Sistema Rank
+                  </p>
+                  <p>🥇 Oro (≥75%)</p>
+                  <p>🥈 Argento (60–74%)</p>
+                  <p>🥉 Bronzo (40–59%)</p>
+                  <p>🪵 Legno (20–39%)</p>
+                  <p>🌱 Seme (&lt;20%)</p>
+                </PopoverContent>
+              </Popover>
+            )}
+
             <div className="flex items-start gap-3">
               <div className={`rounded-lg bg-muted p-2 ${stat.color}`}>
                 <stat.icon className="h-4 w-4" />
@@ -106,7 +187,7 @@ export function PlantStats({ plant }: PlantStatsProps) {
         ))}
       </div>
 
-      {/* History Chart */}
+      {/* Storico annaffiature */}
       {historyData.length > 0 && (
         <Card className="p-4">
           <h4 className="text-sm font-semibold mb-4">Storico Annaffiature</h4>
@@ -156,10 +237,12 @@ export function PlantStats({ plant }: PlantStatsProps) {
         </Card>
       )}
 
-      {/* Weather History */}
+      {/* Temperature */}
       {historyData.length > 0 && (
         <Card className="p-4">
-          <h4 className="text-sm font-semibold mb-4">Temperature durante annaffiature</h4>
+          <h4 className="text-sm font-semibold mb-4">
+            Temperature durante annaffiature
+          </h4>
           <ResponsiveContainer width="100%" height={150}>
             <LineChart data={historyData}>
               <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
@@ -192,7 +275,7 @@ export function PlantStats({ plant }: PlantStatsProps) {
         </Card>
       )}
 
-      {/* Recent History List */}
+      {/* Ultime annaffiature */}
       <Card className="p-4">
         <h4 className="text-sm font-semibold mb-3">Ultime Annaffiature</h4>
         <div className="space-y-2 max-h-48 overflow-y-auto">

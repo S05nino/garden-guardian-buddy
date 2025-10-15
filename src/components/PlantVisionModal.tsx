@@ -99,7 +99,8 @@ export function PlantVisionModal({ open, onClose, mode: propMode, onAddPlant, pl
       const plantKeywords = [
         "plant", "flower", "leaf", "tree", "bush", "herb",
         "succulent", "grass", "seedling", "cactus", "fern",
-        "bonsai", "orchid", "rose", "tulip", "shrub", "ivy"
+        "bonsai", "orchid", "rose", "tulip", "shrub", "ivy",
+        "aquatic", "water", "pond", "ornamental", "vegetable", "fruit"
       ];
 
       const nonPlantKeywords = [
@@ -121,7 +122,7 @@ export function PlantVisionModal({ open, onClose, mode: propMode, onAddPlant, pl
 
       // Condizione finale
       const isPlant =
-        containsPlantWord &&
+        (containsPlantWord || category.includes("plant")) &&
         !containsNonPlantWord &&
         !/unknown|object|undefined|non\s*plant|thing/i.test(name + category);
 
@@ -181,6 +182,8 @@ export function PlantVisionModal({ open, onClose, mode: propMode, onAddPlant, pl
     if (c.includes("flower") || c.includes("fiore")) return "flowers";
     if (c.includes("vegetable") || c.includes("ortaggio") || c.includes("verdura")) return "vegetables";
     if (c.includes("indoor") || c.includes("casa") || c.includes("interno")) return "indoor";
+    if (c.includes("aquatic") || c.includes("acquatica")) return "aquatic";
+    if (c.includes("ornamental") || c.includes("ornamentale")) return "ornamental";
     
     return "other";
   };
@@ -197,6 +200,10 @@ export function PlantVisionModal({ open, onClose, mode: propMode, onAddPlant, pl
         return "🥦";
       case "indoor":
         return "🪴";
+      case "aquatic":
+        return "🪷";
+      case "ornamental":
+        return "🌺";
       default:
         return "🌱";
     }

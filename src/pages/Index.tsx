@@ -13,6 +13,7 @@ import { Plant } from "@/types/plant";
 import { Plus, Leaf, Sparkles, User, Info } from "lucide-react";
 import { toast } from "sonner";
 import { shouldWater } from "@/lib/plantLogic";
+import { ca } from "date-fns/locale";
 
 const Index = () => {
   const { weather, loading: weatherLoading, refetch } = useWeather();
@@ -24,9 +25,26 @@ const Index = () => {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [visionMode, setVisionMode] = useState<"identify" | "diagnose">("identify");
   const [showArenaModal, setShowArenaModal] = useState(false);
-
-  // Nuovo stato: mostra il modal Info / Profilo (usato come guida dell'app)
+  const [showTabBar, setShowTabBar] = useState(true);
   const [showProfileInfo, setShowProfileInfo] = useState(false);
+
+  useEffect(() => {
+    let lastScrollY = window.scrollY;
+
+    const handleScroll = () => {
+      if (window.scrollY > lastScrollY && window.scrollY > 100) {
+        // Scorrendo verso il basso
+        setShowTabBar(false);
+      } else {
+        // Scorrendo verso l'alto
+        setShowTabBar(true);
+      }
+      lastScrollY = window.scrollY;
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Check for plants that need water and show notifications
   useEffect(() => {
@@ -80,7 +98,7 @@ const Index = () => {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 pb-24">
         <div className="space-y-8">
           {/* Weather Widget */}
           <WeatherWidget
@@ -100,7 +118,8 @@ const Index = () => {
               >
                 Tutte ({plants.length})
               </Button>
-              {["herbs", "succulents", "flowers", "vegetables", "indoor"].map(
+              {["herbs", "succulents", "flowers", "vegetables", "indoor", 
+              "aquatic", "ornamental", "other"].map(
                 (cat) => {
                   const count = plants.filter((p) => p.category === cat).length;
                   if (count === 0) return null;
@@ -122,7 +141,13 @@ const Index = () => {
                         ? "Fiori"
                         : cat === "vegetables"
                         ? "Ortaggi"
-                        : "Interno"}{" "}
+                        : cat === "indoor"
+                        ? "Da Interno"
+                        : cat === "aquatic"
+                        ? "Acquatiche"
+                        : cat === "ornamental"
+                        ? "Ornamentali"
+                        : "Altro"}{" "}
                       ({count})
                     </Button>
                   );
@@ -179,7 +204,13 @@ const Index = () => {
                         ? "Fiori"
                         : categoryFilter === "vegetables"
                         ? "Ortaggi"
-                        : "Piante da Interno"
+                        : categoryFilter === "indoor"
+                        ? "Da Interno"
+                        : categoryFilter === "aquatic"
+                        ? "Acquatiche"
+                        : categoryFilter === "ornamental"
+                        ? "Ornamentali"
+                        : "Altro"
                     }`}
               </h2>
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -239,9 +270,9 @@ const Index = () => {
         />
       )}
 
-      {/* Nuovo: Dialog Informazioni / Profilo (usato come guida) */}
+      {/* Nuovo: Dialog Informazioni / Profilo con Release Notes */}
       <Dialog open={showProfileInfo} onOpenChange={(open) => setShowProfileInfo(open)}>
-        <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden">
           <DialogHeader>
             <div className="flex items-center justify-between w-full">
               <DialogTitle className="flex items-center gap-2">
@@ -252,80 +283,140 @@ const Index = () => {
             </div>
           </DialogHeader>
 
-          {/* Contenuto scorrevole */}
-          <div className="space-y-4 py-2 overflow-y-auto pr-2 max-h-[60vh]">
-            <p className="text-sm text-muted-foreground">
-              Benvenuto Garden Buddy! Questa schermata spiega come usare le funzionalità principali
-              della nostra app.
-            </p>
+          {/* Stato per gestire la scheda attiva */}
+          {(() => {
+            const [activeTab, setActiveTab] = useState<"guide" | "release">("guide");
 
-            <section>
-              <h4 className="font-semibold">🌱 Aggiungere piante</h4>
-              <p className="text-sm text-muted-foreground">
-                Usa il pulsante <strong>Aggiungi</strong> in basso per inserire manualmente una pianta,
-                oppure usa <strong>AI Plant Doctor</strong> per identificare e creare automaticamente una scheda dalla foto.
-              </p>
-            </section>
+            return (
+              <>
+                {/* Tab switch */}
+                <div className="flex justify-around border-b mb-3">
+                  <button
+                    className={`flex-1 py-2 text-sm font-medium transition ${
+                      activeTab === "guide"
+                        ? "border-b-2 border-primary text-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={() => setActiveTab("guide")}
+                  >
+                    📖 Guida
+                  </button>
+                  <button
+                    className={`flex-1 py-2 text-sm font-medium transition ${
+                      activeTab === "release"
+                        ? "border-b-2 border-primary text-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={() => setActiveTab("release")}
+                  >
+                    📝 Release Notes
+                  </button>
+                </div>
 
-            <section>
-              <h4 className="font-semibold">🔎 AI Plant Doctor</h4>
-              <p className="text-sm text-muted-foreground">
-                Analizza foto per riconoscere specie, suggerire annaffiature, preferenze ambientali e uno stato di salute iniziale.
-                Puoi usare la modalità <strong>identify</strong> (aggiungi pianta) o <strong>diagnose</strong> (aggiorna salute).
-              </p>
-            </section>
+                {/* Contenuto scorrevole */}
+                <div className="space-y-4 py-2 overflow-y-auto pr-2 max-h-[60vh]">
+                  {activeTab === "guide" ? (
+                    <>
+                      <p className="text-sm text-muted-foreground">
+                        Benvenuto <strong>Garden Buddy</strong>! 🌱  
+                        Qui trovi una panoramica su come usare tutte le funzioni principali della tua app.
+                      </p>
 
-            <section>
-              <h4 className="font-semibold">💧 Annaffiature & Notifiche</h4>
-              <p className="text-sm text-muted-foreground">
-                Ogni pianta ha un campo <code>wateringDays</code> che indica ogni quanti giorni va annaffiata.
-                Tieni traccia delle annaffiature grazie alle notifiche automatiche.
-              </p>
-            </section>
+                      <section>
+                        <h4 className="font-semibold">🌿 Aggiungere piante</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Usa il pulsante <strong>Aggiungi</strong> nella barra in basso per inserire manualmente una pianta,  
+                          oppure sfrutta <strong>AI Plant Doctor</strong> per identificarla da una foto.
+                        </p>
+                      </section>
 
-            <section>
-              <h4 className="font-semibold">📊 Statistiche</h4>
-              <p className="text-sm text-muted-foreground">
-                Ogni scheda pianta mostra giorni di vita, salute media, storico annaffiature e il Rank.
-              </p>
-            </section>
+                      <section>
+                        <h4 className="font-semibold">🤖 AI Plant Doctor</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Analizza le foto per riconoscere specie, preferenze ambientali e salute generale.  
+                          Puoi scegliere tra <strong>Identify</strong> (aggiungi) e <strong>Diagnose</strong> (aggiorna salute).
+                        </p>
+                      </section>
 
-            <section>
-              <h4 className="font-semibold">⚔️ Arena</h4>
-              <p className="text-sm text-muted-foreground">
-                Metti le tue piante in battaglia per divertirti. Le piantine sono classificate in base al loro
-                tasso di vittoria che determina il <em>Rank</em>.
-                Il Rank è calcolato come: <code>victories / (victories + defeats)</code>.
-              </p>
-              <ul className="text-sm text-muted-foreground list-disc list-inside mt-2">
-                <li>🥇 <strong>Oro</strong> — win rate ≥ 75%</li>
-                <li>🥈 <strong>Argento</strong> — 60–74%</li>
-                <li>🥉 <strong>Bronzo</strong> — 40–59%</li>
-                <li>🪵 <strong>Legno</strong> — 20–39%</li>
-                <li>🌱 <strong>Seme</strong> — &lt; 20% oppure nessuna battaglia</li>
-              </ul>
-            </section>
+                      <section>
+                        <h4 className="font-semibold">💧 Annaffiature & Notifiche</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Ogni pianta ha un campo <code>wateringDays</code> per sapere ogni quanto va annaffiata.  
+                          Garden Buddy ti invia notifiche automatiche quando è il momento giusto!
+                        </p>
+                      </section>
 
-            <section>
-              <h4 className="font-semibold">ℹ️ Nota tecnica</h4>
-              <p className="text-sm text-muted-foreground">
-                Non c'è ancora un profilo utente persistente: questo tasto funge solo da guida.
-                Quando integreremo l'autenticazione sarai il primo a saperlo! 
-                Qui potrai vedere il tuo profilo, con tutti i tuoi dati (statistiche globali, preferenze, ecc).
-              </p>
-            </section>
-          </div>
+                      <section>
+                        <h4 className="font-semibold">⚔️ Arena</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Fai combattere le tue piante in sfide divertenti 🌻.  
+                          Il loro <em>Rank</em> dipende dal tasso di vittorie:  
+                        </p>
+                        <ul className="text-sm text-muted-foreground list-disc list-inside mt-2">
+                          <li>🥇 <strong>Oro</strong> — win rate ≥ 75%</li>
+                          <li>🥈 <strong>Argento</strong> — 60–74%</li>
+                          <li>🥉 <strong>Bronzo</strong> — 40–59%</li>
+                          <li>🪵 <strong>Legno</strong> — 20–39%</li>
+                          <li>🌱 <strong>Seme</strong> — &lt; 20% o nessuna battaglia</li>
+                        </ul>
+                      </section>
 
-          <DialogFooter className="flex justify-between items-center pt-4">
-            <div className="flex gap-2">
-              <Button onClick={() => setShowProfileInfo(false)}>Chiudi</Button>
-            </div>
-          </DialogFooter>
+                      <section>
+                        <h4 className="font-semibold">ℹ️ Nota tecnica</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Al momento non c’è ancora un profilo utente persistente:  
+                          questo tasto funge da guida e info center.  
+                          In futuro potrai visualizzare qui le tue statistiche globali 🌍.
+                        </p>
+                      </section>
+                    </>
+                  ) : (
+                    <>
+                      <h4 className="font-semibold text-lg mb-2">🚀 Novità della versione 3.0</h4>
+                      <ul className="space-y-3 text-sm text-muted-foreground">
+                        <li>
+                          🌱 <strong>Nuova barra inferiore</strong> —  
+                          i pulsanti per aggiungere piante e accedere all’AI sono ora nella <em>tab bar</em> per una navigazione più semplice.
+                        </li>
+                        <li>
+                          🤖 <strong>AI migliorata</strong> —  
+                          ora rileva solo vere piante e aggiunge automaticamente al giardino solo ciò che riconosce.  
+                          Abbiamo anche ampliato le <em>categorie</em> disponibili!
+                        </li>
+                        <li>
+                          🧹 <strong>Bug fix</strong> —  
+                          risolti diversi errori segnalati nelle varie schermate e funzionalità dell’app.
+                        </li>
+                        <li>
+                          ⚔️ <strong>Nuova Arena</strong> —  
+                          più interattiva e con nuovi sistemi di ranking 🌟, oltre a più piante da sfidare!
+                        </li>
+                        <li>
+                          ℹ️ <strong>Info Button</strong> —  
+                          ora puoi accedere direttamente a questa guida e alle note di rilascio tramite l’icona in alto a destra.
+                        </li>
+                      </ul>
+
+                      <p className="text-sm text-muted-foreground mt-4">
+                        🌍 <strong>Prossimi passi:</strong>  
+                        stiamo lavorando per rendere possibile l’interazione tra utenti —  
+                        presto potrai condividere i tuoi progressi e confrontare il tuo giardino con quello dei tuoi amici! 💬
+                      </p>
+                    </>
+                  )}
+                </div>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
       {/* Bottom Tab Bar (solo mobile) */}
-      <nav className="fixed bottom-0 left-0 right-0 border-t bg-card/80 backdrop-blur-md flex justify-around items-center py-3 sm:hidden">
+      <nav
+        className={`fixed bottom-0 left-0 right-0 border-t bg-card/80 backdrop-blur-md flex justify-around items-center py-3 sm:hidden transition-transform duration-300 ${
+          showTabBar ? "translate-y-0" : "translate-y-full"
+        }`}
+      >
         {/* Aggiungi manualmente */}
         <button
           onClick={() => setShowAddModal(true)}

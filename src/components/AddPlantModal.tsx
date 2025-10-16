@@ -22,6 +22,9 @@ export function AddPlantModal({ onAdd, onClose }: AddPlantModalProps) {
     flowers: "Fiori",
     vegetables: "Ortaggi",
     indoor: "Da Interno",
+    aquatic: "Acquatiche",
+    ornamental: "Ornamentali",
+    other: "Altro"
   };
 
   const filteredPlants =

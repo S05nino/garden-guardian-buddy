@@ -47,8 +47,12 @@ export const ArenaModal = ({ open, onClose, plants, updatePlant }: ArenaModalPro
 
   if (!open) return null;
 
-  const categories = ["herbs", "succulents", "flowers", "vegetables", "indoor"];
-  const randomNames = ["Cactus Selvatico", "Pianta Oscura", "Muschio Maligno", "Fiore Spinoso"];
+  const categories = ["herbs", "succulents", "flowers", "vegetables", "indoor", 
+    "aquatic", "ornamental", "other"];
+  
+  const randomNames = ["Cactus Selvatico", "Pianta Oscura", "Muschio Maligno",
+    "Fiore Spinoso", "Felce Lunare", "Rovo del Destino", "Fiore Infernale",
+    "Orchidea Guerriera", "Erba del Crepuscolo", "Bonsai Mistico",];
 
   /** 🔹 Mosse base per categoria (valori "di riferimento", poi scalati leggermente) */
   const baseMovesByCategory: Record<string, Move[]> = {
@@ -81,6 +85,24 @@ export const ArenaModal = ({ open, onClose, plants, updatePlant }: ArenaModalPro
       { name: "Attacco Ombroso", type: "attack", power: 28, cost: 35 },
       { name: "Scudo Umido", type: "defense", power: 0.45 },
       { name: "Fotosintesi", type: "heal", power: 22 },
+    ],
+    aquatic: [
+      { name: "Getto d’Alghe", type: "attack", power: 25, cost: 30 },
+      { name: "Onda Linfatica", type: "attack", power: 33, cost: 40 },
+      { name: "Scudo Marino", type: "defense", power: 0.55 },
+      { name: "Nebbia Curativa", type: "heal", power: 21 },
+    ],
+    ornamental: [
+      { name: "Eleganza Tagliente", type: "attack", power: 26, cost: 30 },
+      { name: "Danza dei Petali", type: "attack", power: 32, cost: 38 },
+      { name: "Velo di Grazia", type: "defense", power: 0.48 },
+      { name: "Fragranza Rigenerante", type: "heal", power: 23 },
+    ],
+    other: [
+      { name: "Attacco Naturale", type: "attack", power: 24, cost: 28 },
+      { name: "Ira del Giardino", type: "attack", power: 31, cost: 37 },
+      { name: "Scudo Verde", type: "defense", power: 0.5 },
+      { name: "Rinascita Botanica", type: "heal", power: 20 },
     ],
   };
 

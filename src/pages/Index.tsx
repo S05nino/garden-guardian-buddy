@@ -279,7 +279,7 @@ const Index = () => {
                 <User className="h-5 w-5 text-primary" />
                 Informazioni & Guida — Garden Buddy
               </DialogTitle>
-              <div className="text-xs text-muted-foreground">v3.0</div>
+              <div className="text-xs text-muted-foreground">v3.1</div>
             </div>
           </DialogHeader>
 

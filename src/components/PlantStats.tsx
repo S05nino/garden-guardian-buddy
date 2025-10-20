@@ -39,6 +39,38 @@ export function PlantStats({ plant }: PlantStatsProps) {
   const daysAlive = getDaysAlive(plant);
   const avgHealth = getAverageHealth(plant);
 
+    // Calcola la tendenza reale basata sulla storia
+  let trendSymbol = "→";
+  let trendLabel = "Stabile";
+  let trendColor = "text-muted-foreground";
+
+  if (plant.wateringHistory && plant.wateringHistory.length >= 2) {
+    const history = plant.wateringHistory;
+    const lastHealth = history[history.length - 1].waterLevel * 100; // ultimo valore d'acqua come indicatore di salute
+    const prevHealth = history[history.length - 2].waterLevel * 100;
+
+    const diff = lastHealth - prevHealth;
+
+    if (diff > 3) {
+      trendSymbol = "↑";
+      trendLabel = "Miglioramento";
+      trendColor = "text-primary";
+    } else if (diff < -3) {
+      trendSymbol = "↓";
+      trendLabel = "Peggioramento";
+      trendColor = "text-destructive";
+    } else {
+      trendSymbol = "→";
+      trendLabel = "Stabile";
+      trendColor = "text-muted-foreground";
+    }
+  } else {
+    // fallback se non c'è storico sufficiente
+    trendSymbol = plant.health >= avgHealth ? "↑" : "→";
+    trendLabel = plant.health >= avgHealth ? "Buona forma" : "In osservazione";
+    trendColor = plant.health >= avgHealth ? "text-primary" : "text-warning";
+  }
+
   // Dati per i grafici
   const historyData = plant.wateringHistory
     ? plant.wateringHistory.slice(-15).map((h) => ({
@@ -97,9 +129,9 @@ export function PlantStats({ plant }: PlantStatsProps) {
     {
       icon: TrendingUp,
       label: "Tendenza",
-      value: plant.health >= avgHealth ? "↑" : "↓",
-      unit: plant.health >= avgHealth ? "Miglioramento" : "Attenzione",
-      color: plant.health >= avgHealth ? "text-primary" : "text-destructive",
+      value: trendSymbol,
+      unit: trendLabel,
+      color: trendColor,
     },
     {
       icon: Trophy,

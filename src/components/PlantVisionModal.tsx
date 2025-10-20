@@ -145,15 +145,24 @@ export function PlantVisionModal({ open, onClose, mode: propMode, onAddPlant, pl
       } else {
         toast.success("Analisi completata! 🔍");
 
-        // Se stiamo diagnosticando una pianta specifica, aggiorna la salute
         if (plantToDiagnose && onUpdatePlantHealth && data.overallHealth) {
-          const healthMap = {
-            healthy: 100,
-            fair: 60,
-            poor: 30,
-          };
-          const newHealth =
-            healthMap[data.overallHealth as keyof typeof healthMap] || 50;
+          const getRandomizedHealth = (baseHealth: number, range: number = 5) => {
+          const min = Math.max(0, baseHealth - range);
+          const max = Math.min(100, baseHealth + range);
+          const randomValue = Math.random() * (max - min) + min;
+          return Math.round(randomValue);
+        };
+
+        const healthMap = {
+          healthy: getRandomizedHealth(97, 3), // 94–100%
+          fair: getRandomizedHealth(62, 7),    // 55–69%
+          poor: getRandomizedHealth(35, 10),   // 25–45%
+        };
+
+        const newHealth =
+          typeof data.overallHealth === "number"
+            ? Math.round(data.overallHealth)
+            : healthMap[data.overallHealth as keyof typeof healthMap] || getRandomizedHealth(50, 10);
           onUpdatePlantHealth(plantToDiagnose.id, newHealth);
           toast.success(
             `Salute di ${plantToDiagnose.name} aggiornata a ${newHealth}%`,

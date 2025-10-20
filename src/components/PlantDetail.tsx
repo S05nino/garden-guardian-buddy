@@ -52,11 +52,14 @@ export function PlantDetail({
 
   // Ricalcola i valori quando localPlant o weather cambiano
   const waterLevel = useMemo(() => getWaterLevel(localPlant), [localPlant]);
-  const daysSinceWatered = useMemo(() => {
-    if (!localPlant.lastWatered) return null;
-    const diff = Date.now() - new Date(localPlant.lastWatered).getTime();
-    return Math.floor(diff / (1000 * 60 * 60 * 24));
-  }, [localPlant.lastWatered]);
+const daysSinceWatered = useMemo(() => {
+  if (!localPlant.lastWatered) return null; // nessuna annaffiatura mai registrata
+  const lastWateredDate = new Date(localPlant.lastWatered).getTime();
+  const now = Date.now();
+  if (isNaN(lastWateredDate) || lastWateredDate > now) return null; // data non valida
+  const diffDays = Math.floor((now - lastWateredDate) / (1000 * 60 * 60 * 24));
+  return diffDays;
+}, [localPlant.lastWatered]);
 
   const adjustedDays = useMemo(
     () => (weather ? calculateAdjustedWateringDays(localPlant, weather) : localPlant.wateringDays),
@@ -211,7 +214,7 @@ export function PlantDetail({
                 </div>
                 <span className="font-medium">
                   {daysSinceWatered == null
-                    ? "Oggi"
+                    ? "Non ancora annaffiata"
                     : daysSinceWatered === 0
                     ? "Oggi"
                     : `${daysSinceWatered} ${daysSinceWatered === 1 ? "giorno" : "giorni"} fa`}

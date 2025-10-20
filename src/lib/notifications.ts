@@ -1,6 +1,8 @@
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
+import { calculateAdjustedWateringDays, getWaterLevel } from "@/lib/plantLogic";
+import type { Plant, Weather } from "@/types/plant";
 
 /**
  * Richiede i permessi di notifica.
@@ -183,5 +185,94 @@ export async function testNotification() {
   } catch (error) {
     console.error('Error testing notification:', error);
     return false;
+  }
+}
+
+/**
+ * 🔁 Aggiorna o riprogramma tutte le notifiche in base allo stato attuale
+ * delle piante e (se disponibile) del meteo.
+ */
+export async function refreshSmartReminders(plants: Plant[], weather: Weather | null) {
+  try {
+    if (!Capacitor.isNativePlatform()) return;
+
+    const permission = await ensureNotificationPermission();
+    if (permission !== "granted") return;
+
+    for (const plant of plants) {
+      // Cancella eventuali reminder vecchi
+      await cancelWateringReminder(plant.name);
+
+      const waterLevel = getWaterLevel(plant);
+      const adjustedDays = weather
+        ? calculateAdjustedWateringDays(plant, weather)
+        : plant.wateringDays;
+      const hoursRemaining = waterLevel * adjustedDays * 24;
+
+      const daysRemaining = Math.floor(hoursRemaining / 24);
+      const hoursOnly = Math.floor(hoursRemaining % 24);
+
+      // 🧠 Messaggio dinamico realistico
+      let message = "";
+      if (hoursRemaining <= 1) {
+        message = `È ora di annaffiare ${plant.name}! 💧`;
+      } else if (daysRemaining > 0) {
+        message = `Tra circa ${daysRemaining}g ${hoursOnly}h ${plant.name} avrà bisogno d'acqua 🌿`;
+      } else {
+        message = `Tra circa ${Math.floor(hoursRemaining)} ore ${plant.name} avrà bisogno d'acqua 💧`;
+      }
+
+      // Pianifica la notifica dinamica
+      await scheduleWateringReminderWithBody(plant.name, hoursRemaining, message);
+    }
+  } catch (error) {
+    console.error("Error refreshing smart reminders:", error);
+  }
+}
+
+/**
+ * 🔹 Variante di scheduleWateringReminder che accetta anche un messaggio personalizzato.
+ */
+async function scheduleWateringReminderWithBody(
+  plantName: string,
+  hoursUntilWatering: number,
+  body: string
+) {
+  try {
+    await cancelWateringReminder(plantName);
+
+    const notificationTime = new Date(Date.now() + hoursUntilWatering * 60 * 60 * 1000);
+    const notificationId = Math.abs(
+      plantName.split("").reduce((hash, char) => ((hash << 5) - hash) + char.charCodeAt(0), 0)
+    );
+
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          id: notificationId,
+          title: `Promemoria irrigazione 🌱`,
+          body,
+          schedule: { at: notificationTime },
+          smallIcon: "ic_launcher",
+          iconColor: "#4CAF50",
+          sound: "default",
+          autoCancel: true,
+        },
+      ],
+    });
+
+    // Memorizza reminder
+    await Preferences.set({
+      key: `reminder_${plantName}`,
+      value: JSON.stringify({
+        notificationId,
+        scheduledTime: notificationTime.getTime(),
+        plantName,
+      }),
+    });
+
+    console.log(`✅ Promemoria aggiornato per ${plantName}: ${body}`);
+  } catch (error) {
+    console.error("Error scheduling smart reminder:", error);
   }
 }

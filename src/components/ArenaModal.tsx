@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Leaf } from "lucide-react";
 import { toast } from "sonner";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Info } from "lucide-react";
 
 interface Move {
   name: string;
@@ -437,7 +439,57 @@ export const ArenaModal = ({ open, onClose, plants, updatePlant }: ArenaModalPro
           {/* Preparazione */}
           {preparingBattle && (
             <div className="text-center space-y-6">
-              <h2 className="text-lg font-semibold">Preparati alla battaglia!</h2>
+              {/* 🔹 Titolo + Info */}
+              <div className="flex items-center justify-center gap-2 relative">
+                <h2 className="text-lg font-semibold">Preparati alla battaglia!</h2>
+
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-foreground"
+                      title="Come funziona il combattimento?"
+                    >
+                      <Info className="h-5 w-5" />
+                    </Button>
+                  </PopoverTrigger>
+
+                  <PopoverContent className="text-sm w-80 space-y-2">
+                    <p className="font-semibold text-base">⚔️ Guida al Combattimento</p>
+                    <div className="border-t border-border my-2" />
+                    <p>
+                      Ogni pianta ha <b>HP</b> (salute) e <b>Energia</b>:
+                    </p>
+                    <ul className="list-disc list-inside space-y-1 text-left">
+                      <li>🩸 <b>HP</b> diminuisce quando subisci danni. Se arriva a 0, perdi la battaglia.</li>
+                      <li>⚡ <b>Energia</b> serve per usare le mosse d’attacco (ogni mossa consuma energia).</li>
+                      <li>🛡️ Mosse di <b>Difesa</b> riducono i danni e ricaricano energia.</li>
+                      <li>🌿 Mosse di <b>Cura</b> rigenerano HP e un po’ di energia.</li>
+                    </ul>
+
+                    <div className="border-t border-border my-2" />
+
+                    <p className="font-semibold">🎨 Colori delle mosse</p>
+                    <ul className="list-disc list-inside space-y-1 text-left">
+                      <li>🔴 <b>Rosso</b> → Mossa d’attacco: infligge danni, ma consuma energia.</li>
+                      <li>🟡 <b>Giallo</b> → Mossa difensiva: riduce i danni e ricarica un po’ di energia.</li>
+                      <li>🟢 <b>Verde</b> → Mossa curativa: recupera HP e leggermente energia.</li>
+                    </ul>
+
+                    <div className="border-t border-border my-2" />
+
+                    <p className="text-muted-foreground">
+                      💡 L’efficacia delle mosse dipende da salute, età e robustezza della pianta.
+                    </p>
+                    <p className="text-muted-foreground">
+                      Vince la pianta che porta l’avversario a <b>0 HP</b>!
+                    </p>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* 🔹 Immagini giocatore e nemico */}
               <div className="flex justify-around items-center">
                 <div>
                   <img src={preparingBattle.player.image} alt={preparingBattle.player.name} className="w-28 h-28 rounded-xl mx-auto" />

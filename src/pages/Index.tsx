@@ -1,25 +1,96 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { WeatherWidget } from "@/components/WeatherWidget";
 import { PlantCard } from "@/components/PlantCard";
 import { PlantDetail } from "@/components/PlantDetail";
 import { AddPlantModal } from "@/components/AddPlantModal";
 import { ArenaModal } from "@/components/ArenaModal";
 import { PlantVisionModal } from "@/components/PlantVisionModal";
-import { AuthModal } from "@/components/AuthModal";
 import { useWeather } from "@/hooks/useWeather";
 import { usePlants } from "@/hooks/usePlants";
-import { useAuth } from "@/hooks/useAuth";
 import { Plant } from "@/types/plant";
-import { Plus, Leaf, Sparkles, User, Info } from "lucide-react";
+import { Plus, Leaf, Sparkles, User } from "lucide-react";
 import { toast } from "sonner";
 import { shouldWater } from "@/lib/plantLogic";
+import { AuthModal } from "@/components/AuthModal";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+
+function EditProfileSection({
+  currentName,
+  onUpdate,
+}: {
+  currentName: string;
+  onUpdate: (newName: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [newName, setNewName] = useState(currentName);
+  const [loading, setLoading] = useState(false);
+
+  const handleSave = async () => {
+    if (!newName.trim()) return;
+    setLoading(true);
+    try {
+      await supabase.auth.updateUser({ data: { full_name: newName } });
+      onUpdate(newName);
+      setEditing(false);
+      toast.success("Profilo aggiornato!");
+    } catch (err) {
+      console.error("Errore aggiornamento nome:", err);
+      toast.error("Errore durante l'aggiornamento");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!editing) {
+    return (
+      <Button
+        variant="outline"
+        className="w-full"
+        onClick={() => setEditing(true)}
+      >
+        ✏️ Modifica profilo
+      </Button>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2 mt-2">
+      <input
+        type="text"
+        className="border rounded-md px-3 py-2 text-sm"
+        value={newName}
+        onChange={(e) => setNewName(e.target.value)}
+        placeholder="Nome e Cognome"
+      />
+      <div className="flex gap-2">
+        <Button
+          onClick={handleSave}
+          disabled={loading}
+          className="flex-1 bg-gradient-primary"
+        >
+          {loading ? "Salvataggio..." : "Salva"}
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => setEditing(false)}
+          className="flex-1"
+        >
+          Annulla
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 
 const Index = () => {
   const { weather, loading: weatherLoading, refetch } = useWeather();
   const { plants, addPlant, updatePlant, removePlant } = usePlants(weather);
   const { user } = useAuth();
+
   const [selectedPlant, setSelectedPlant] = useState<Plant | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showVisionModal, setShowVisionModal] = useState(false);
@@ -28,17 +99,27 @@ const Index = () => {
   const [visionMode, setVisionMode] = useState<"identify" | "diagnose">("identify");
   const [showArenaModal, setShowArenaModal] = useState(false);
   const [showTabBar, setShowTabBar] = useState(true);
+
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showProfileInfo, setShowProfileInfo] = useState(false);
+
+  // Calcola le iniziali per il bottone
+  const initials = user?.user_metadata?.full_name
+    ? user.user_metadata.full_name
+        .split(" ")
+        .filter(Boolean)
+        .map((n: string) => n[0])
+        .join("")
+        .toUpperCase()
+    : null;
 
   useEffect(() => {
     let lastScrollY = window.scrollY;
 
     const handleScroll = () => {
       if (window.scrollY > lastScrollY && window.scrollY > 100) {
-        // Scorrendo verso il basso
         setShowTabBar(false);
       } else {
-        // Scorrendo verso l'alto
         setShowTabBar(true);
       }
       lastScrollY = window.scrollY;
@@ -48,7 +129,7 @@ const Index = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Check for plants that need water and show notifications
+  // Notifiche piante da annaffiare
   useEffect(() => {
     if (plants.length > 0 && weather) {
       const needWater = plants.filter((p) => shouldWater(p, weather));
@@ -82,17 +163,27 @@ const Index = () => {
               </div>
             </div>
 
-            {/* --- Bottone profilo / autenticazione in alto a destra --- */}
+            {/* Bottone profilo: iniziali se loggato, icona se guest.
+                Clic: se loggato -> apre Info/Dialog con tab Profilo; se guest -> AuthModal */}
             <div className="flex items-center gap-3">
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={() => setShowAuthModal(true)}
-                aria-label={user ? "Profilo utente" : "Accedi"}
-                className="rounded-full"
-                title={user ? "Profilo" : "Accedi"}
+                onClick={() => {
+                  if (user) setShowProfileInfo(true);
+                  else setShowAuthModal(true);
+                }}
+                aria-label="Profilo"
+                className="rounded-full relative"
+                title={user ? "Profilo / Info" : "Accedi"}
               >
-                <User className="h-5 w-5" />
+                {user && initials ? (
+                  <span className="flex items-center justify-center bg-primary text-white font-semibold rounded-full h-8 w-8">
+                    {initials}
+                  </span>
+                ) : (
+                  <User className="h-5 w-5" />
+                )}
               </Button>
             </div>
           </div>
@@ -120,8 +211,7 @@ const Index = () => {
               >
                 Tutte ({plants.length})
               </Button>
-              {["herbs", "succulents", "flowers", "vegetables", "indoor", 
-              "aquatic", "ornamental", "other"].map(
+              {["herbs","succulents","flowers","vegetables","indoor","aquatic","ornamental","other"].map(
                 (cat) => {
                   const count = plants.filter((p) => p.category === cat).length;
                   if (count === 0) return null;
@@ -131,9 +221,7 @@ const Index = () => {
                       variant={categoryFilter === cat ? "default" : "outline"}
                       size="sm"
                       onClick={() => setCategoryFilter(cat)}
-                      className={
-                        categoryFilter === cat ? "bg-gradient-primary" : ""
-                      }
+                      className={categoryFilter === cat ? "bg-gradient-primary" : ""}
                     >
                       {cat === "herbs"
                         ? "Erbe"
@@ -272,16 +360,243 @@ const Index = () => {
         />
       )}
 
-      {/* Auth Modal */}
-      <AuthModal 
-        open={showAuthModal} 
-        onClose={() => setShowAuthModal(false)} 
-      />
+      {/* Auth modal (solo se non loggato) */}
+      {showAuthModal && (
+        <AuthModal open={showAuthModal} onClose={() => setShowAuthModal(false)} />
+      )}
 
+      {/* INFO DIALOG — ora con 3 tab: Profilo / Guida / Release */}
+      <Dialog open={showProfileInfo} onOpenChange={(open) => setShowProfileInfo(open)}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden">
+          <DialogHeader>
+            <div className="flex items-center justify-between w-full">
+              <DialogTitle className="flex items-center gap-2">
+                {/* Avatar/iniziali solo se loggato */}
+                {user && initials ? (
+                  <span className="flex items-center justify-center bg-primary text-white font-semibold rounded-full h-7 w-7">
+                    {initials}
+                  </span>
+                ) : (
+                  <User className="h-5 w-5 text-primary" />
+                )}
+                {user ? "Profilo & Info — Garden Buddy" : "Informazioni & Guida — Garden Buddy"}
+              </DialogTitle>
+              <div className="text-xs text-muted-foreground">v3.1</div>
+            </div>
+          </DialogHeader>
+
+          {/* Stato interno per tab (default: se loggato -> 'profile', altrimenti 'guide') */}
+          {(() => {
+            const [activeTab, setActiveTab] = useState<"profile" | "guide" | "release">(
+              user ? "profile" : "guide"
+            );
+
+            return (
+              <>
+                {/* Tab switch */}
+                <div className="flex justify-around border-b mb-3">
+                  <button
+                    className={`flex-1 py-2 text-sm font-medium transition ${
+                      activeTab === "profile"
+                        ? "border-b-2 border-primary text-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={() => setActiveTab("profile")}
+                  >
+                    👤 Profilo
+                  </button>
+                  <button
+                    className={`flex-1 py-2 text-sm font-medium transition ${
+                      activeTab === "guide"
+                        ? "border-b-2 border-primary text-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={() => setActiveTab("guide")}
+                  >
+                    📖 Guida
+                  </button>
+                  <button
+                    className={`flex-1 py-2 text-sm font-medium transition ${
+                      activeTab === "release"
+                        ? "border-b-2 border-primary text-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={() => setActiveTab("release")}
+                  >
+                    📝 Release Notes
+                  </button>
+                </div>
+
+                {/* Contenuto scrollabile */}
+                <div className="space-y-4 py-2 overflow-y-auto pr-2 max-h-[60vh]">
+                  {activeTab === "profile" ? (
+                    <>
+                      {user ? (
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center bg-primary text-white font-semibold rounded-full h-10 w-10">
+                              {initials}
+                            </div>
+                            <div>
+                              <div className="font-semibold">{user.user_metadata?.full_name}</div>
+                              <div className="text-sm text-muted-foreground">{user.email}</div>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3 text-sm">
+                            <div className="p-3 rounded-lg border bg-card">
+                              <div className="text-muted-foreground">Piante</div>
+                              <div className="text-xl font-bold">{plants.length}</div>
+                            </div>
+                            <div className="p-3 rounded-lg border bg-card">
+                              <div className="text-muted-foreground">Categoria preferita</div>
+                              <div className="text-base">
+                                {
+                                  (["herbs","succulents","flowers","vegetables","indoor"] as const)
+                                    .map((c) => [c, plants.filter(p => p.category === c).length] as const)
+                                    .sort((a,b) => b[1]-a[1])[0]?.[0] ?? "—"
+                                }
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* ✏️ Sezione modifica profilo */}
+                          <EditProfileSection
+                            currentName={user.user_metadata?.full_name || ""}
+                            onUpdate={(newName) => {
+                              if (user.user_metadata) {
+                                user.user_metadata.full_name = newName;
+                              }
+                            }}
+                          />
+
+                          {/* 🔸 Pulsante logout */}
+                          <Button
+                            variant="destructive"
+                            className="w-full mt-2"
+                            onClick={() => {
+                              setShowProfileInfo(false);
+                              supabase.auth.signOut();
+                              toast.success("Logout effettuato");
+                            }}
+                          >
+                            🚪 Esci
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-3 text-center">
+                          <p className="text-sm text-muted-foreground">
+                            Non hai ancora effettuato l'accesso.
+                          </p>
+                          <Button
+                            className="bg-gradient-primary"
+                            onClick={() => {
+                              setShowProfileInfo(false);
+                              setShowAuthModal(true);
+                            }}
+                          >
+                            Accedi o Registrati
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  ) : activeTab === "guide" ? (
+                    <>
+                      <p className="text-sm text-muted-foreground">
+                        Benvenuto <strong>Garden Buddy</strong>! 🌱  
+                        Qui trovi una panoramica su come usare tutte le funzioni principali della tua app.
+                      </p>
+
+                      <section>
+                        <h4 className="font-semibold">🌿 Aggiungere piante</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Usa il pulsante <strong>Aggiungi</strong> nella barra in basso per inserire manualmente una pianta,  
+                          oppure sfrutta <strong>AI Plant Doctor</strong> per identificarla da una foto.
+                        </p>
+                      </section>
+
+                      <section>
+                        <h4 className="font-semibold">🤖 AI Plant Doctor</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Analizza le foto per riconoscere specie, preferenze ambientali e salute generale.  
+                          Puoi scegliere tra <strong>Identify</strong> (aggiungi) e <strong>Diagnose</strong> (aggiorna salute).
+                        </p>
+                      </section>
+
+                      <section>
+                        <h4 className="font-semibold">💧 Annaffiature & Notifiche</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Ogni pianta ha un campo <code>wateringDays</code> per sapere ogni quanto va annaffiata.  
+                          Garden Buddy ti invia notifiche automatiche quando è il momento giusto!
+                        </p>
+                      </section>
+
+                      <section>
+                        <h4 className="font-semibold">⚔️ Arena</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Fai combattere le tue piante in sfide divertenti 🌻.  
+                          Il loro <em>Rank</em> dipende dal tasso di vittorie:  
+                        </p>
+                        <ul className="text-sm text-muted-foreground list-disc list-inside mt-2">
+                          <li>🥇 <strong>Oro</strong> — win rate ≥ 75%</li>
+                          <li>🥈 <strong>Argento</strong> — 60–74%</li>
+                          <li>🥉 <strong>Bronzo</strong> — 40–59%</li>
+                          <li>🪵 <strong>Legno</strong> — 20–39%</li>
+                          <li>🌱 <strong>Seme</strong> — &lt; 20% o nessuna battaglia</li>
+                        </ul>
+                      </section>
+
+                      <section>
+                        <h4 className="font-semibold">👤 Profilo Utente</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Registrati per salvare le tue piante nel cloud e accedervi da qualsiasi dispositivo.
+                          Potrai anche visualizzare le tue statistiche personali!
+                        </p>
+                      </section>
+                    </>
+                  ) : (
+                    <>
+                      <h4 className="font-semibold text-lg mb-2">🚀 Novità della versione 3.1</h4>
+                      <ul className="space-y-3 text-sm text-muted-foreground">
+                        <li>
+                          👤 <strong>Sistema di autenticazione</strong> —  
+                          ora puoi registrarti e fare login per salvare le tue piante nel cloud!
+                        </li>
+                        <li>
+                          ☁️ <strong>Sincronizzazione cloud</strong> —  
+                          le tue piante vengono salvate automaticamente e sincronizzate tra dispositivi.
+                        </li>
+                        <li>
+                          📊 <strong>Profilo personalizzato</strong> —  
+                          visualizza le tue statistiche, modifica il tuo nome e controlla il tuo giardino.
+                        </li>
+                        <li>
+                          🌱 <strong>Nuova barra inferiore</strong> —  
+                          i pulsanti per aggiungere piante e accedere all'AI sono ora nella <em>tab bar</em> per una navigazione più semplice.
+                        </li>
+                        <li>
+                          🤖 <strong>AI migliorata</strong> —  
+                          ora rileva solo vere piante e aggiunge automaticamente al giardino solo ciò che riconosce.
+                        </li>
+                      </ul>
+
+                      <p className="text-sm text-muted-foreground mt-4">
+                        🌍 <strong>Prossimi passi:</strong>  
+                        stiamo lavorando per rendere possibile l'interazione tra utenti —  
+                        presto potrai condividere i tuoi progressi e confrontare il tuo giardino con quello dei tuoi amici! 💬
+                      </p>
+                    </>
+                  )}
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       {/* Bottom Tab Bar (solo mobile) */}
       <nav
-        className={`fixed bottom-0 left-0 right-0 border-t bg-card/80 backdrop-blur-md flex justify-around items-center py-3 sm:hidden transition-transform duration-300 ${
+        className={`fixed bottom-0 left-0 right-0 border-t bg-card/80 backdrop-blur-md flex justify-around items-center py-3 sm:hidden transition-transform duration-300 z-30 ${
           showTabBar ? "translate-y-0" : "translate-y-full"
         }`}
       >

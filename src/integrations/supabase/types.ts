@@ -14,7 +14,198 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      battle_turns: {
+        Row: {
+          action: string
+          battle_id: string
+          created_at: string | null
+          damage: number | null
+          id: string
+          is_critical: boolean | null
+          move_id: string | null
+          player_id: string
+          turn_number: number
+        }
+        Insert: {
+          action: string
+          battle_id: string
+          created_at?: string | null
+          damage?: number | null
+          id?: string
+          is_critical?: boolean | null
+          move_id?: string | null
+          player_id: string
+          turn_number: number
+        }
+        Update: {
+          action?: string
+          battle_id?: string
+          created_at?: string | null
+          damage?: number | null
+          id?: string
+          is_critical?: boolean | null
+          move_id?: string | null
+          player_id?: string
+          turn_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_turns_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "battles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battle_turns_move_id_fkey"
+            columns: ["move_id"]
+            isOneToOne: false
+            referencedRelation: "plant_moves"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battles: {
+        Row: {
+          created_at: string | null
+          current_turn: string | null
+          id: string
+          player1_current_hp: number
+          player1_id: string
+          player1_plant_id: string
+          player2_current_hp: number | null
+          player2_id: string | null
+          player2_plant_id: string | null
+          status: Database["public"]["Enums"]["battle_status"]
+          updated_at: string | null
+          winner_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_turn?: string | null
+          id?: string
+          player1_current_hp: number
+          player1_id: string
+          player1_plant_id: string
+          player2_current_hp?: number | null
+          player2_id?: string | null
+          player2_plant_id?: string | null
+          status?: Database["public"]["Enums"]["battle_status"]
+          updated_at?: string | null
+          winner_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_turn?: string | null
+          id?: string
+          player1_current_hp?: number
+          player1_id?: string
+          player1_plant_id?: string
+          player2_current_hp?: number | null
+          player2_id?: string | null
+          player2_plant_id?: string | null
+          status?: Database["public"]["Enums"]["battle_status"]
+          updated_at?: string | null
+          winner_id?: string | null
+        }
+        Relationships: []
+      }
+      plant_moves: {
+        Row: {
+          accuracy: number
+          base_power: number
+          description: string | null
+          id: string
+          move_type: Database["public"]["Enums"]["move_type"]
+          name: string
+          plant_category: string
+        }
+        Insert: {
+          accuracy?: number
+          base_power: number
+          description?: string | null
+          id?: string
+          move_type: Database["public"]["Enums"]["move_type"]
+          name: string
+          plant_category: string
+        }
+        Update: {
+          accuracy?: number
+          base_power?: number
+          description?: string | null
+          id?: string
+          move_type?: Database["public"]["Enums"]["move_type"]
+          name?: string
+          plant_category?: string
+        }
+        Relationships: []
+      }
+      plants: {
+        Row: {
+          category: string
+          created_at: string | null
+          defeats: number | null
+          description: string | null
+          health: number | null
+          icon: string | null
+          id: string
+          image_url: string | null
+          last_watered: string | null
+          name: string
+          position: string
+          preferences: Json | null
+          reminders_enabled: boolean | null
+          total_waterings: number | null
+          updated_at: string | null
+          user_id: string
+          victories: number | null
+          watering_days: number
+          watering_history: Json | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          defeats?: number | null
+          description?: string | null
+          health?: number | null
+          icon?: string | null
+          id?: string
+          image_url?: string | null
+          last_watered?: string | null
+          name: string
+          position: string
+          preferences?: Json | null
+          reminders_enabled?: boolean | null
+          total_waterings?: number | null
+          updated_at?: string | null
+          user_id: string
+          victories?: number | null
+          watering_days?: number
+          watering_history?: Json | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          defeats?: number | null
+          description?: string | null
+          health?: number | null
+          icon?: string | null
+          id?: string
+          image_url?: string | null
+          last_watered?: string | null
+          name?: string
+          position?: string
+          preferences?: Json | null
+          reminders_enabled?: boolean | null
+          total_waterings?: number | null
+          updated_at?: string | null
+          user_id?: string
+          victories?: number | null
+          watering_days?: number
+          watering_history?: Json | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +214,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      battle_status: "waiting" | "active" | "finished"
+      move_type: "water" | "sun" | "earth" | "wind"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +342,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      battle_status: ["waiting", "active", "finished"],
+      move_type: ["water", "sun", "earth", "wind"],
+    },
   },
 } as const

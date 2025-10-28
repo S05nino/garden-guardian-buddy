@@ -45,7 +45,7 @@ interface ArenaModalProps {
 
 export const ArenaModal = ({ open, onClose, plants, updatePlant, friendChallenge }: ArenaModalProps) => {
   // 🔹 Hook Supabase Arena
-  const { startBattle, getUserBattles, getLeaderboard } = useArena();
+  const { startBattle, getUserBattles, getLeaderboard, updatePlantStats } = useArena();
 
   // 🔹 Stati interni
   const [battleStarted, setBattleStarted] = useState(false);
@@ -55,6 +55,9 @@ export const ArenaModal = ({ open, onClose, plants, updatePlant, friendChallenge
   const [turnLog, setTurnLog] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"select" | "history" | "leaderboard">("select");
+  const [historyData, setHistoryData] = useState<any[]>([]);
+  const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
 
   if (!open) return null;
 
@@ -346,7 +349,7 @@ export const ArenaModal = ({ open, onClose, plants, updatePlant, friendChallenge
     const player = plants.find((p) => p.id === playerPlant.id);
     if (!player) return;
 
-    // aggiorna statistiche locali
+    // aggiorna statistiche locali del giocatore
     if (isPlayerWinner) {
       updatePlant(player.id, { victories: (player.victories || 0) + 1 });
     } else {
@@ -356,11 +359,16 @@ export const ArenaModal = ({ open, onClose, plants, updatePlant, friendChallenge
     // 🔹 Salva su Supabase SOLO se è una sfida tra amici
     if (friendChallenge) {
       try {
+        // Salva la battaglia
         await startBattle(
           playerPlant.id,
           enemyPlant.id,
           friendChallenge.friendUserId
         );
+        
+        // Aggiorna statistiche di entrambe le piante nel database
+        await updatePlantStats(playerPlant.id, isPlayerWinner);
+        await updatePlantStats(enemyPlant.id, !isPlayerWinner);
       } catch (err: any) {
         console.error("Errore nel salvataggio battaglia:", err);
       }
@@ -408,6 +416,29 @@ export const ArenaModal = ({ open, onClose, plants, updatePlant, friendChallenge
     setTurnLog("");
     setWinner(null);
     setPreparingBattle(null);
+    setViewMode("select");
+  };
+
+  const loadHistory = async () => {
+    try {
+      const battles = await getUserBattles();
+      setHistoryData(battles);
+      setViewMode("history");
+    } catch (err) {
+      toast.error("Errore nel caricamento dello storico");
+      console.error(err);
+    }
+  };
+
+  const loadLeaderboard = async () => {
+    try {
+      const data = await getLeaderboard();
+      setLeaderboardData(data);
+      setViewMode("leaderboard");
+    } catch (err) {
+      toast.error("Errore nel caricamento della classifica");
+      console.error(err);
+    }
   };
 
   return (
@@ -416,25 +447,141 @@ export const ArenaModal = ({ open, onClose, plants, updatePlant, friendChallenge
         <CardContent className="p-6">
 
           {/* 🔹 Pulsanti Supabase: Storico / Classifica (solo per sfide tra amici) */}
-          {!battleStarted && !preparingBattle && friendChallenge && (
+          {!battleStarted && !preparingBattle && friendChallenge && viewMode === "select" && (
             <div className="flex justify-end gap-2 mb-3">
-              <Button variant="outline" onClick={async () => {
-                const battles = await getUserBattles();
-                toast.info(`Hai ${battles.length} battaglie registrate`);
-              }}>
+              <Button variant="outline" onClick={loadHistory}>
                 📜 Storico
               </Button>
-              <Button variant="secondary" onClick={async () => {
-                const leaderboard = await getLeaderboard();
-                console.log("Classifica globale:", leaderboard);
-                toast.info("Classifica globale in console 🌍");
-              }}>
+              <Button variant="secondary" onClick={loadLeaderboard}>
                 🏆 Classifica
               </Button>
             </div>
           )}
+
+          {/* 🔹 Visualizzazione Storico */}
+          {viewMode === "history" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold">📜 Storico Battaglie</h2>
+                <Button variant="ghost" size="sm" onClick={() => setViewMode("select")}>
+                  ← Indietro
+                </Button>
+              </div>
+              
+              {historyData.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <p>Nessuna battaglia registrata</p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                  {historyData.map((battle: any) => {
+                    const isChallenger = battle.challenger_id === battle.challenger?.user_id;
+                    const isWinner = battle.winner_id === (isChallenger ? battle.challenger_id : battle.defender_id);
+                    
+                    return (
+                      <Card key={battle.id} className={`p-4 ${isWinner ? 'border-green-500/50' : 'border-red-500/50'}`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-2xl">{battle.challenger_plant?.icon || '🪴'}</span>
+                              <span className="font-medium">{battle.challenger_plant?.name || 'Pianta'}</span>
+                              <span className="text-muted-foreground text-sm">
+                                ({battle.challenger?.full_name || 'Tu'})
+                              </span>
+                            </div>
+                            <div className="text-center text-xs text-muted-foreground my-1">VS</div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl">{battle.defender_plant?.icon || '🪴'}</span>
+                              <span className="font-medium">{battle.defender_plant?.name || 'Pianta'}</span>
+                              <span className="text-muted-foreground text-sm">
+                                ({battle.defender?.full_name || 'Avversario'})
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className={`text-xl font-bold ${isWinner ? 'text-green-500' : 'text-red-500'}`}>
+                              {isWinner ? '🏆 Vittoria' : '💀 Sconfitta'}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {new Date(battle.created_at).toLocaleDateString()}
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+              
+              <Button variant="outline" className="w-full mt-4" onClick={onClose}>
+                Chiudi
+              </Button>
+            </div>
+          )}
+
+          {/* 🔹 Visualizzazione Classifica */}
+          {viewMode === "leaderboard" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold">🏆 Classifica Globale</h2>
+                <Button variant="ghost" size="sm" onClick={() => setViewMode("select")}>
+                  ← Indietro
+                </Button>
+              </div>
+              
+              {leaderboardData.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <p>Nessun dato disponibile</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                  {leaderboardData.map((entry: any, index: number) => {
+                    const winRate = Number(entry.win_rate) || 0;
+                    let medalEmoji = '';
+                    if (index === 0) medalEmoji = '🥇';
+                    else if (index === 1) medalEmoji = '🥈';
+                    else if (index === 2) medalEmoji = '🥉';
+                    
+                    return (
+                      <Card key={entry.user_id} className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="text-2xl font-bold text-muted-foreground w-8">
+                              {medalEmoji || `#${index + 1}`}
+                            </div>
+                            <div>
+                              <div className="font-semibold">{entry.full_name}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {entry.total_battles} battaglie
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-green-500">
+                              {entry.wins} V
+                            </div>
+                            <div className="text-sm text-red-500">
+                              {entry.losses} S
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {winRate.toFixed(1)}% vittorie
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+              
+              <Button variant="outline" className="w-full mt-4" onClick={onClose}>
+                Chiudi
+              </Button>
+            </div>
+          )}
+
           {/* Selezione pianta */}
-          {!battleStarted && !preparingBattle && (
+          {!battleStarted && !preparingBattle && viewMode === "select" && (
             <div className="space-y-4">
               <p className="text-muted-foreground text-sm">
                 Scegli una delle tue piante per combattere:

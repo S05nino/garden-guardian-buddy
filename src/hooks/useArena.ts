@@ -28,13 +28,20 @@ export function useArena() {
     return { winnerId, challengerScore, defenderScore };
   };
 
-  // 🔹 Recupera battaglie passate dell'utente
+  // 🔹 Recupera battaglie passate dell'utente con dettagli
   const getUserBattles = async () => {
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) return [];
+    
     const { data, error } = await supabase
       .from("arena_battles")
-      .select("*")
+      .select(`
+        *,
+        challenger:profiles!arena_battles_challenger_id_fkey(full_name),
+        defender:profiles!arena_battles_defender_id_fkey(full_name),
+        challenger_plant:plants!arena_battles_challenger_plant_id_fkey(name, icon),
+        defender_plant:plants!arena_battles_defender_plant_id_fkey(name, icon)
+      `)
       .or(`challenger_id.eq.${user.id},defender_id.eq.${user.id}`)
       .order("created_at", { ascending: false });
 
@@ -42,12 +49,48 @@ export function useArena() {
     return data;
   };
 
-  // 🔹 Classifica globale (opzionale)
+  // 🔹 Classifica globale con nomi utenti
   const getLeaderboard = async () => {
     const { data, error } = await supabase.rpc("get_arena_leaderboard");
     if (error) throw error;
+    
+    // Aggiungi i nomi degli utenti
+    if (data && data.length > 0) {
+      const userIds = data.map((row: any) => row.user_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .in("user_id", userIds);
+      
+      return data.map((row: any) => ({
+        ...row,
+        full_name: profiles?.find((p) => p.user_id === row.user_id)?.full_name || "Utente"
+      }));
+    }
+    
     return data;
   };
 
-  return { startBattle, getUserBattles, getLeaderboard };
+  // 🔹 Aggiorna statistiche piante dopo battaglia
+  const updatePlantStats = async (plantId: string, isWinner: boolean) => {
+    const field = isWinner ? "victories" : "defeats";
+    
+    const { data: currentPlant } = await supabase
+      .from("plants")
+      .select(field)
+      .eq("id", plantId)
+      .single();
+    
+    if (currentPlant) {
+      const newValue = (currentPlant[field] || 0) + 1;
+      const { error } = await supabase
+        .from("plants")
+        .update({ [field]: newValue })
+        .eq("id", plantId);
+      
+      if (error) console.error("Errore aggiornamento statistiche pianta:", error);
+    }
+  };
+
+  return { startBattle, getUserBattles, getLeaderboard, updatePlantStats };
 }

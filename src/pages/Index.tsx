@@ -744,20 +744,11 @@ const Index = () => {
           <span>AI Plant Doctor</span>
         </button>
 
-        {/* Arena */}
-        <button
-          onClick={() => setShowArenaModal(true)}
-          className="flex flex-col items-center text-sm text-muted-foreground hover:text-foreground transition"
-        >
-          ⚔️
-          <span>Arena</span>
-        </button>
-
-        {/* Amici */}
+        {/* Buddies */}
         <button
           onClick={() => {
             if (!user) {
-              toast.info("Effettua l'accesso per vedere gli amici");
+              toast.info("Effettua l'accesso per vedere i tuoi Buddies");
               setShowAuthModal(true);
               return;
             }
@@ -766,7 +757,16 @@ const Index = () => {
           className="flex flex-col items-center text-sm text-muted-foreground hover:text-foreground transition"
         >
           <Users className="h-5 w-5 mb-1" />
-          <span>Amici</span>
+          <span>Buddies</span>
+        </button>
+
+        {/* Arena */}
+        <button
+          onClick={() => setShowArenaModal(true)}
+          className="flex flex-col items-center text-sm text-muted-foreground hover:text-foreground transition"
+        >
+          ⚔️
+          <span>Arena</span>
         </button>
       </nav>
     </div>

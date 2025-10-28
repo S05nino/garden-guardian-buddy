@@ -6,10 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useFriends } from "@/hooks/useFriends";
 import { useAuth } from "@/hooks/useAuth";
+import { usePlants } from "@/hooks/usePlants";
+import { useWeather } from "@/hooks/useWeather";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, UserPlus, Users, Leaf, Swords } from "lucide-react";
 import { toast } from "sonner";
 import { Plant } from "@/types/plant";
+import { ArenaModal } from "@/components/ArenaModal";
 
 interface FriendDetailProps {
   friendId: string;
@@ -146,9 +149,16 @@ export default function Friends() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { friends, loading, addFriend, removeFriend } = useFriends();
+  const { weather } = useWeather();
+  const { plants, updatePlant } = usePlants(weather);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [friendId, setFriendId] = useState("");
   const [selectedFriend, setSelectedFriend] = useState<string | null>(null);
+  const [arenaChallenge, setArenaChallenge] = useState<{
+    friendUserId: string;
+    friendName: string;
+    friendPlants: Plant[];
+  } | null>(null);
 
   const handleAddFriend = async () => {
     if (!friendId.trim()) {
@@ -163,11 +173,31 @@ export default function Friends() {
     }
   };
 
-  const handleChallenge = (friendId: string, plants: Plant[]) => {
-    // Chiudi il dialog dell'amico e naviga all'arena con parametri
+  const handleChallenge = async (friendUserId: string, friendPlants: Plant[]) => {
+    if (plants.length === 0) {
+      toast.error("Devi avere almeno una pianta per combattere!");
+      return;
+    }
+    
+    if (friendPlants.length === 0) {
+      toast.error("Questo amico non ha piante!");
+      return;
+    }
+
+    // Carica il nome dell'amico
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("user_id", friendUserId)
+      .single();
+
+    // Chiudi il dialog dell'amico e apri l'arena
     setSelectedFriend(null);
-    toast.info("Funzionalità sfida in sviluppo!");
-    // TODO: Implementare logica sfida con ArenaModal
+    setArenaChallenge({
+      friendUserId,
+      friendName: profileData?.full_name || "Amico",
+      friendPlants,
+    });
   };
 
   if (!user) {
@@ -338,6 +368,17 @@ export default function Friends() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* ArenaModal per sfide tra amici */}
+      {arenaChallenge && (
+        <ArenaModal
+          open={!!arenaChallenge}
+          onClose={() => setArenaChallenge(null)}
+          plants={plants}
+          updatePlant={updatePlant}
+          friendChallenge={arenaChallenge}
+        />
+      )}
     </div>
   );
 }

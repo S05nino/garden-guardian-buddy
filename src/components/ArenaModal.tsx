@@ -36,9 +36,14 @@ interface ArenaModalProps {
   onClose: () => void;
   plants: any[];
   updatePlant: (plantId: string, updates: Partial<any>) => void;
+  friendChallenge?: {
+    friendUserId: string;
+    friendName: string;
+    friendPlants: any[];
+  };
 }
 
-export const ArenaModal = ({ open, onClose, plants, updatePlant }: ArenaModalProps) => {
+export const ArenaModal = ({ open, onClose, plants, updatePlant, friendChallenge }: ArenaModalProps) => {
   // 🔹 Hook Supabase Arena
   const { startBattle, getUserBattles, getLeaderboard } = useArena();
 
@@ -264,33 +269,58 @@ export const ArenaModal = ({ open, onClose, plants, updatePlant }: ArenaModalPro
       attackEnergy: 100,
     };
 
-    // Genera un avversario "coerente" con la stessa logica
-    const enemyCategory = categories[Math.floor(Math.random() * categories.length)];
-    const enemySeed = {
-      category: enemyCategory,
-      ageDays: Math.floor(Math.random() * 200), // 0-199
-      robustness: +(0.9 + Math.random() * 0.5).toFixed(2), // 0.90 - 1.40
-      health: 100,
-    };
+    let enemyStats: BattlePlant;
 
-    const statsEnemy = calculateStats(enemySeed);
-    const currentHealthEnemy = Math.max(10, Math.round(enemySeed.health));
+    if (friendChallenge && friendChallenge.friendPlants.length > 0) {
+      // 🔹 Sfida tra amici: scegli una pianta casuale dell'amico
+      const friendPlant = friendChallenge.friendPlants[Math.floor(Math.random() * friendChallenge.friendPlants.length)];
+      const statsFriend = calculateStats(friendPlant);
+      const currentHealthFriend = Math.max(10, Math.round(friendPlant.health || 100));
 
-    const enemyStats: BattlePlant = {
-      id: "enemy",
-      name: randomNames[Math.floor(Math.random() * randomNames.length)],
-      icon: "🌵",
-      category: enemyCategory,
-      maxHealth: currentHealthEnemy,
-      health: currentHealthEnemy,
-      attackStat: statsEnemy.attack,
-      defenseStat: statsEnemy.defense,
-      ageDays: enemySeed.ageDays,
-      robustness: enemySeed.robustness,
-      image: "/icon/placeholder-plant.png",
-      moves: generateMoves({ ...enemySeed, category: enemyCategory, health: enemySeed.health }),
-      attackEnergy: 100,
-    };
+      enemyStats = {
+        id: friendPlant.id,
+        name: friendPlant.name,
+        icon: friendPlant.icon,
+        category: friendPlant.category,
+        maxHealth: currentHealthFriend,
+        health: currentHealthFriend,
+        attackStat: statsFriend.attack,
+        defenseStat: statsFriend.defense,
+        ageDays: friendPlant.ageDays || 0,
+        robustness: friendPlant.robustness || 1.0,
+        image: friendPlant.imageUrl || "/placeholder-plant.png",
+        moves: generateMoves(friendPlant),
+        attackEnergy: 100,
+      };
+    } else {
+      // 🔹 Battaglia vs computer: genera un avversario casuale
+      const enemyCategory = categories[Math.floor(Math.random() * categories.length)];
+      const enemySeed = {
+        category: enemyCategory,
+        ageDays: Math.floor(Math.random() * 200),
+        robustness: +(0.9 + Math.random() * 0.5).toFixed(2),
+        health: 100,
+      };
+
+      const statsEnemy = calculateStats(enemySeed);
+      const currentHealthEnemy = Math.max(10, Math.round(enemySeed.health));
+
+      enemyStats = {
+        id: "enemy",
+        name: randomNames[Math.floor(Math.random() * randomNames.length)],
+        icon: "🌵",
+        category: enemyCategory,
+        maxHealth: currentHealthEnemy,
+        health: currentHealthEnemy,
+        attackStat: statsEnemy.attack,
+        defenseStat: statsEnemy.defense,
+        ageDays: enemySeed.ageDays,
+        robustness: enemySeed.robustness,
+        image: "/icon/placeholder-plant.png",
+        moves: generateMoves({ ...enemySeed, category: enemyCategory, health: enemySeed.health }),
+        attackEnergy: 100,
+      };
+    }
 
     setPreparingBattle({ player: playerStats, enemy: enemyStats });
   };
@@ -323,14 +353,17 @@ export const ArenaModal = ({ open, onClose, plants, updatePlant }: ArenaModalPro
       updatePlant(player.id, { defeats: (player.defeats || 0) + 1 });
     }
 
-    try {
-      await startBattle(
-        playerPlant.id,
-        enemyPlant.id,
-        "00000000-0000-0000-0000-000000000000" // placeholder defender
-      );
-    } catch (err: any) {
-      console.error("Errore nel salvataggio battaglia:", err);
+    // 🔹 Salva su Supabase SOLO se è una sfida tra amici
+    if (friendChallenge) {
+      try {
+        await startBattle(
+          playerPlant.id,
+          enemyPlant.id,
+          friendChallenge.friendUserId
+        );
+      } catch (err: any) {
+        console.error("Errore nel salvataggio battaglia:", err);
+      }
     }
   };
 
@@ -382,8 +415,8 @@ export const ArenaModal = ({ open, onClose, plants, updatePlant }: ArenaModalPro
       <Card className="max-w-4xl w-full bg-card shadow-2xl rounded-2xl overflow-hidden">
         <CardContent className="p-6">
 
-          {/* 🔹 Pulsanti Supabase: Storico / Classifica */}
-          {!battleStarted && !preparingBattle && (
+          {/* 🔹 Pulsanti Supabase: Storico / Classifica (solo per sfide tra amici) */}
+          {!battleStarted && !preparingBattle && friendChallenge && (
             <div className="flex justify-end gap-2 mb-3">
               <Button variant="outline" onClick={async () => {
                 const battles = await getUserBattles();
@@ -521,6 +554,17 @@ export const ArenaModal = ({ open, onClose, plants, updatePlant }: ArenaModalPro
                   </PopoverContent>
                 </Popover>
               </div>
+
+              {/* 🔹 Indicatore tipo battaglia */}
+              {friendChallenge ? (
+                <p className="text-sm text-primary font-medium">
+                  👥 Sfida contro {friendChallenge.friendName}
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  🤖 Allenamento vs Computer
+                </p>
+              )}
 
               {/* 🔹 Immagini giocatore e nemico */}
               <div className="flex justify-around items-center">

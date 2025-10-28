@@ -1,1 +1,4 @@
 project_id = "joklrtimlxwrbxrzdasl"
+
+[functions.plant-vision]
+verify_jwt = false

@@ -344,19 +344,38 @@ const Index = () => {
               <div className="bg-muted rounded-full p-6 mb-4">
                 <Leaf className="h-12 w-12 text-muted-foreground" />
               </div>
-              <h2 className="text-2xl font-bold mb-2">Nessuna pianta aggiunta</h2>
-              <p className="text-muted-foreground mb-6 max-w-md">
-                Inizia il tuo giardino aggiungendo la tua prima pianta. Ti aiuteremo a
-                prendertene cura!
-              </p>
-              <Button
-                onClick={() => setShowAddModal(true)}
-                size="lg"
-                className="bg-gradient-primary shadow-soft"
-              >
-                <Plus className="mr-2 h-5 w-5" />
-                Aggiungi Prima Pianta
-              </Button>
+              {!user ? (
+                <>
+                  <h2 className="text-2xl font-bold mb-2">Benvenuto in Garden Buddy</h2>
+                  <p className="text-muted-foreground mb-6 max-w-md">
+                    Accedi al tuo profilo per iniziare a gestire il tuo giardino e prenderti cura delle tue piante!
+                  </p>
+                  <Button
+                    onClick={() => setShowAuthModal(true)}
+                    size="lg"
+                    className="bg-gradient-primary shadow-soft"
+                  >
+                    <User className="mr-2 h-5 w-5" />
+                    Accedi o Registrati
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-2xl font-bold mb-2">Nessuna pianta aggiunta</h2>
+                  <p className="text-muted-foreground mb-6 max-w-md">
+                    Inizia il tuo giardino aggiungendo la tua prima pianta. Ti aiuteremo a
+                    prendertene cura!
+                  </p>
+                  <Button
+                    onClick={() => setShowAddModal(true)}
+                    size="lg"
+                    className="bg-gradient-primary shadow-soft"
+                  >
+                    <Plus className="mr-2 h-5 w-5" />
+                    Aggiungi Prima Pianta
+                  </Button>
+                </>
+              )}
             </div>
           ) : filteredPlants.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">

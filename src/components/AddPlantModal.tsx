@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { v4 as uuidv4 } from "uuid";
 import { Plant, PLANT_TEMPLATES } from "@/types/plant";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,7 +36,7 @@ export function AddPlantModal({ onAdd, onClose }: AddPlantModalProps) {
   const handleSelect = (template: typeof PLANT_TEMPLATES[0]) => {
     const newPlant: Plant = {
       ...template,
-      id: `plant-${Date.now()}`,
+      id: uuidv4(),
       lastWatered: new Date().toISOString(),
       health: 100,
       wateringHistory: [],

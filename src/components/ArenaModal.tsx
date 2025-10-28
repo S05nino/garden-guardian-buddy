@@ -2,10 +2,10 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Leaf } from "lucide-react";
+import { Leaf, Info } from "lucide-react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Info } from "lucide-react";
+import { useArena } from "@/hooks/useArena";
 
 interface Move {
   name: string;
@@ -39,6 +39,10 @@ interface ArenaModalProps {
 }
 
 export const ArenaModal = ({ open, onClose, plants, updatePlant }: ArenaModalProps) => {
+  // 🔹 Hook Supabase Arena
+  const { startBattle, getUserBattles, getLeaderboard } = useArena();
+
+  // 🔹 Stati interni
   const [battleStarted, setBattleStarted] = useState(false);
   const [preparingBattle, setPreparingBattle] = useState<{ player: BattlePlant; enemy: BattlePlant } | null>(null);
   const [playerPlant, setPlayerPlant] = useState<BattlePlant | null>(null);
@@ -303,20 +307,30 @@ export const ArenaModal = ({ open, onClose, plants, updatePlant }: ArenaModalPro
     setPreparingBattle(null);
   };
 
-  const endBattle = (victor: string) => {
+  const endBattle = async (victor: string) => {
     setWinner(victor);
     toast.success(`${victor} ha vinto la battaglia!`);
 
-    if (playerPlant) {
-      if (victor === playerPlant.name) {
-        updatePlant(playerPlant.id, {
-          victories: (plants.find(p => p.id === playerPlant.id)?.victories || 0) + 1,
-        });
-      } else {
-        updatePlant(playerPlant.id, {
-          defeats: (plants.find(p => p.id === playerPlant.id)?.defeats || 0) + 1,
-        });
-      }
+    if (!playerPlant || !enemyPlant) return;
+    const isPlayerWinner = victor === playerPlant.name;
+    const player = plants.find((p) => p.id === playerPlant.id);
+    if (!player) return;
+
+    // aggiorna statistiche locali
+    if (isPlayerWinner) {
+      updatePlant(player.id, { victories: (player.victories || 0) + 1 });
+    } else {
+      updatePlant(player.id, { defeats: (player.defeats || 0) + 1 });
+    }
+
+    try {
+      await startBattle(
+        playerPlant.id,
+        enemyPlant.id,
+        "00000000-0000-0000-0000-000000000000" // placeholder defender
+      );
+    } catch (err: any) {
+      console.error("Errore nel salvataggio battaglia:", err);
     }
   };
 
@@ -367,6 +381,25 @@ export const ArenaModal = ({ open, onClose, plants, updatePlant }: ArenaModalPro
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <Card className="max-w-4xl w-full bg-card shadow-2xl rounded-2xl overflow-hidden">
         <CardContent className="p-6">
+
+          {/* 🔹 Pulsanti Supabase: Storico / Classifica */}
+          {!battleStarted && !preparingBattle && (
+            <div className="flex justify-end gap-2 mb-3">
+              <Button variant="outline" onClick={async () => {
+                const battles = await getUserBattles();
+                toast.info(`Hai ${battles.length} battaglie registrate`);
+              }}>
+                📜 Storico
+              </Button>
+              <Button variant="secondary" onClick={async () => {
+                const leaderboard = await getLeaderboard();
+                console.log("Classifica globale:", leaderboard);
+                toast.info("Classifica globale in console 🌍");
+              }}>
+                🏆 Classifica
+              </Button>
+            </div>
+          )}
           {/* Selezione pianta */}
           {!battleStarted && !preparingBattle && (
             <div className="space-y-4">

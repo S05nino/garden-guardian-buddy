@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      arena_battles: {
+        Row: {
+          battle_log: Json | null
+          challenger_id: string
+          challenger_plant_id: string
+          created_at: string | null
+          defender_id: string
+          defender_plant_id: string
+          id: string
+          updated_at: string | null
+          winner_id: string | null
+        }
+        Insert: {
+          battle_log?: Json | null
+          challenger_id: string
+          challenger_plant_id: string
+          created_at?: string | null
+          defender_id: string
+          defender_plant_id: string
+          id?: string
+          updated_at?: string | null
+          winner_id?: string | null
+        }
+        Update: {
+          battle_log?: Json | null
+          challenger_id?: string
+          challenger_plant_id?: string
+          created_at?: string | null
+          defender_id?: string
+          defender_plant_id?: string
+          id?: string
+          updated_at?: string | null
+          winner_id?: string | null
+        }
+        Relationships: []
+      }
       battle_turns: {
         Row: {
           action: string
@@ -211,7 +247,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_arena_leaderboard: {
+        Args: never
+        Returns: {
+          losses: number
+          total_battles: number
+          user_id: string
+          win_rate: number
+          wins: number
+        }[]
+      }
     }
     Enums: {
       battle_status: "waiting" | "active" | "finished"

@@ -10,7 +10,7 @@ import { PlantVisionModal } from "@/components/PlantVisionModal";
 import { useWeather } from "@/hooks/useWeather";
 import { usePlants } from "@/hooks/usePlants";
 import { Plant } from "@/types/plant";
-import { Plus, Leaf, Sparkles, User } from "lucide-react";
+import { Plus, Leaf, Sparkles, User, Users, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { shouldWater } from "@/lib/plantLogic";
 import { AuthModal } from "@/components/AuthModal";
@@ -529,10 +529,33 @@ const Index = () => {
                             <div className="flex items-center justify-center bg-primary text-white font-semibold rounded-full h-10 w-10">
                               {initials}
                             </div>
-                            <div>
+                            <div className="flex-1">
                               <div className="font-semibold">{user.user_metadata?.full_name}</div>
                               <div className="text-sm text-muted-foreground">{user.email}</div>
                             </div>
+                          </div>
+
+                          {/* ID Utente condivisibile */}
+                          <div className="p-3 rounded-lg border bg-card space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">Il tuo ID</span>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(user.id);
+                                  toast.success("ID copiato negli appunti!");
+                                }}
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <code className="text-xs bg-muted p-2 rounded block break-all">
+                              {user.id}
+                            </code>
+                            <p className="text-xs text-muted-foreground">
+                              Condividi questo ID con i tuoi amici per aggiungerti!
+                            </p>
                           </div>
 
                           <div className="grid grid-cols-2 gap-3 text-sm">
@@ -721,6 +744,22 @@ const Index = () => {
         >
           ⚔️
           <span>Arena</span>
+        </button>
+
+        {/* Amici */}
+        <button
+          onClick={() => {
+            if (!user) {
+              toast.info("Effettua l'accesso per vedere gli amici");
+              setShowAuthModal(true);
+              return;
+            }
+            window.location.href = "/friends";
+          }}
+          className="flex flex-col items-center text-sm text-muted-foreground hover:text-foreground transition"
+        >
+          <Users className="h-5 w-5 mb-1" />
+          <span>Amici</span>
         </button>
       </nav>
     </div>

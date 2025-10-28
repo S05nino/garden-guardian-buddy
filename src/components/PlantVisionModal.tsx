@@ -77,92 +77,55 @@ export function PlantVisionModal({ open, onClose, mode: propMode, onAddPlant, pl
 
   const analyzeImage = async () => {
     if (!image) return;
-
     setAnalyzing(true);
     setResult(null);
 
     try {
-      console.log("Analyzing image with mode:", mode);
-
-      const { data, error } = await supabase.functions.invoke("plant-vision", {
-        body: { image, mode },
+      const { data, error } = await supabase.functions.invoke('plant-vision', {
+        body: { image, mode }
       });
 
-      if (error) {
-        console.error("Function error:", error);
-        throw error;
+      if (error) throw error;
+
+      // Se l'API ha restituito un errore strutturato (no_plant_detected)
+      if (data?.error === "no_plant_detected") {
+        toast.error(data.message || "Nessuna pianta rilevata nell'immagine. Prova con un'altra foto.");
+        setAnalyzing(false);
+        return;
       }
 
-      console.log("Analysis result:", data);
+      // Verifica confidenza minima per l'identificazione
+      if (mode === "identify" && data.confidence < 0.3) {
+        toast.error("Non sono sicuro che questa sia una pianta. Prova con un'immagine più chiara.");
+        setAnalyzing(false);
+        return;
+      }
 
-      // ✅ Liste di parole chiave per il controllo
-      const plantKeywords = [
-        "plant", "flower", "leaf", "tree", "bush", "herb",
-        "succulent", "grass", "seedling", "cactus", "fern",
-        "bonsai", "orchid", "rose", "tulip", "shrub", "ivy",
-        "aquatic", "water", "pond", "ornamental", "vegetable", "fruit"
-      ];
-
-      const nonPlantKeywords = [
-        "animal", "cat", "dog", "bird", "person", "human", "face",
-        "car", "vehicle", "computer", "phone", "object", "building",
-        "chair", "table", "food", "house", "sky", "cloud", "toy"
-      ];
-
-      const name = data?.name?.toLowerCase() || "";
-      const category = data?.category?.toLowerCase() || "";
-
-      // 🔎 Logica avanzata per decidere se è una pianta
-      const containsPlantWord = plantKeywords.some((w) =>
-        name.includes(w) || category.includes(w)
-      );
-      const containsNonPlantWord = nonPlantKeywords.some((w) =>
-        name.includes(w) || category.includes(w)
-      );
-
-      // Condizione finale
-      const isPlant =
-        (containsPlantWord || category.includes("plant")) &&
-        !containsNonPlantWord &&
-        !/unknown|object|undefined|non\s*plant|thing/i.test(name + category);
-
-      console.log("🪴 IsPlant:", isPlant, "— name:", name, "category:", category);
-
-      // 🔹 Salva il risultato nel componente
-      setResult({ ...data, isPlant });
-
+      setResult({ ...data, isPlant: true });
+      
       if (mode === "identify") {
-        if (isPlant) {
-          toast.success("Pianta identificata! 🌱", {
-            description: data.name,
-          });
-        } else {
-          toast.error("Nessuna pianta rilevata ❌", {
-            description:
-              "L'immagine sembra contenere un oggetto o un animale, non una pianta.",
-          });
-        }
+        toast.success(`${data.name} identificata con ${Math.round(data.confidence * 100)}% di confidenza`);
       } else {
-        toast.success("Analisi completata! 🔍");
-
+        toast.success("Diagnosi completata");
+        
         if (plantToDiagnose && onUpdatePlantHealth && data.overallHealth) {
           const getRandomizedHealth = (baseHealth: number, range: number = 5) => {
-          const min = Math.max(0, baseHealth - range);
-          const max = Math.min(100, baseHealth + range);
-          const randomValue = Math.random() * (max - min) + min;
-          return Math.round(randomValue);
-        };
+            const min = Math.max(0, baseHealth - range);
+            const max = Math.min(100, baseHealth + range);
+            const randomValue = Math.random() * (max - min) + min;
+            return Math.round(randomValue);
+          };
 
-        const healthMap = {
-          healthy: getRandomizedHealth(97, 3), // 94–100%
-          fair: getRandomizedHealth(62, 7),    // 55–69%
-          poor: getRandomizedHealth(35, 10),   // 25–45%
-        };
+          const healthMap = {
+            healthy: getRandomizedHealth(97, 3),
+            fair: getRandomizedHealth(62, 7),
+            poor: getRandomizedHealth(35, 10),
+          };
 
-        const newHealth =
-          typeof data.overallHealth === "number"
-            ? Math.round(data.overallHealth)
-            : healthMap[data.overallHealth as keyof typeof healthMap] || getRandomizedHealth(50, 10);
+          const newHealth =
+            typeof data.overallHealth === "number"
+              ? Math.round(data.overallHealth)
+              : healthMap[data.overallHealth as keyof typeof healthMap] || getRandomizedHealth(50, 10);
           onUpdatePlantHealth(plantToDiagnose.id, newHealth);
           toast.success(
             `Salute di ${plantToDiagnose.name} aggiornata a ${newHealth}%`,
@@ -173,10 +136,8 @@ export function PlantVisionModal({ open, onClose, mode: propMode, onAddPlant, pl
         }
       }
     } catch (error) {
-      console.error("Error analyzing image:", error);
-      toast.error("Errore durante l'analisi", {
-        description: error instanceof Error ? error.message : "Riprova",
-      });
+      console.error('Errore analisi:', error);
+      toast.error("Errore durante l'analisi. Riprova.");
     } finally {
       setAnalyzing(false);
     }

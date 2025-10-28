@@ -18,6 +18,43 @@ export function AuthModal({ open, onClose }: { open: boolean; onClose: () => voi
     try {
       setLoading(true);
 
+      // Validazione input
+      if (!email.trim() || !password.trim()) {
+        toast({
+          title: "Errore",
+          description: "Email e password sono obbligatori",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        toast({
+          title: "Errore",
+          description: "Formato email non valido",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (password.length < 6) {
+        toast({
+          title: "Errore",
+          description: "La password deve essere di almeno 6 caratteri",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (isRegister && !fullName.trim()) {
+        toast({
+          title: "Errore",
+          description: "Il nome è obbligatorio per la registrazione",
+          variant: "destructive",
+        });
+        return;
+      }
+
       if (isRegister) {
         await signUp(email, password, fullName);
         toast({

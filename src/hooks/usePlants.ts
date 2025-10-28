@@ -86,7 +86,7 @@ export function usePlants(weather: Weather | null) {
   }, [weather]);
 
   // ➕ Aggiungi
-  const addPlant = (p: Plant) => {
+  const addPlant = async (p: Plant) => {
     const newPlant: Plant = {
       ...p,
       id: p.id || uuidv4(),
@@ -95,6 +95,17 @@ export function usePlants(weather: Weather | null) {
       victories: p.victories || 0,
       defeats: p.defeats || 0,
     };
+    
+    // Se l'utente è loggato, salva immediatamente su Supabase
+    if (userId) {
+      const record = toDbPlant(newPlant, userId);
+      const { error } = await supabase.from("plants").insert([record]);
+      if (error) {
+        console.error("Errore aggiunta pianta:", error);
+        return;
+      }
+    }
+    
     setPlants((prev) => [...prev, newPlant]);
   };
 

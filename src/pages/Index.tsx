@@ -24,18 +24,28 @@ function EditProfileSection({
   currentName: string;
   onUpdate: (newName: string) => void;
 }) {
-  const [editing, setEditing] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [editingPassword, setEditingPassword] = useState(false);
   const [newName, setNewName] = useState(currentName);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSave = async () => {
-    if (!newName.trim()) return;
+  const handleSaveName = async () => {
+    if (!newName.trim()) {
+      toast.error("Il nome non può essere vuoto");
+      return;
+    }
+    if (newName.trim().length > 100) {
+      toast.error("Il nome non può superare i 100 caratteri");
+      return;
+    }
     setLoading(true);
     try {
       await supabase.auth.updateUser({ data: { full_name: newName } });
       onUpdate(newName);
-      setEditing(false);
-      toast.success("Profilo aggiornato!");
+      setEditingName(false);
+      toast.success("Nome aggiornato!");
     } catch (err) {
       console.error("Errore aggiornamento nome:", err);
       toast.error("Errore durante l'aggiornamento");
@@ -44,43 +54,125 @@ function EditProfileSection({
     }
   };
 
-  if (!editing) {
-    return (
-      <Button
-        variant="outline"
-        className="w-full"
-        onClick={() => setEditing(true)}
-      >
-        ✏️ Modifica profilo
-      </Button>
-    );
-  }
+  const handleSavePassword = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      toast.error("La password deve essere di almeno 6 caratteri");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("Le password non coincidono");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      setEditingPassword(false);
+      setNewPassword("");
+      setConfirmPassword("");
+      toast.success("Password aggiornata!");
+    } catch (err: any) {
+      console.error("Errore aggiornamento password:", err);
+      toast.error(err.message || "Errore durante l'aggiornamento");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="flex flex-col gap-2 mt-2">
-      <input
-        type="text"
-        className="border rounded-md px-3 py-2 text-sm"
-        value={newName}
-        onChange={(e) => setNewName(e.target.value)}
-        placeholder="Nome e Cognome"
-      />
-      <div className="flex gap-2">
-        <Button
-          onClick={handleSave}
-          disabled={loading}
-          className="flex-1 bg-gradient-primary"
-        >
-          {loading ? "Salvataggio..." : "Salva"}
-        </Button>
+    <div className="space-y-3">
+      {/* Modifica Nome */}
+      {!editingName ? (
         <Button
           variant="outline"
-          onClick={() => setEditing(false)}
-          className="flex-1"
+          className="w-full"
+          onClick={() => setEditingName(true)}
         >
-          Annulla
+          ✏️ Modifica nome
         </Button>
-      </div>
+      ) : (
+        <div className="flex flex-col gap-2 p-3 border rounded-lg">
+          <label className="text-sm font-medium">Nuovo nome</label>
+          <input
+            type="text"
+            className="border rounded-md px-3 py-2 text-sm"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Nome e Cognome"
+            maxLength={100}
+          />
+          <div className="flex gap-2">
+            <Button
+              onClick={handleSaveName}
+              disabled={loading}
+              className="flex-1 bg-gradient-primary"
+            >
+              {loading ? "Salvataggio..." : "Salva"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditingName(false);
+                setNewName(currentName);
+              }}
+              className="flex-1"
+            >
+              Annulla
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Modifica Password */}
+      {!editingPassword ? (
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={() => setEditingPassword(true)}
+        >
+          🔒 Cambia password
+        </Button>
+      ) : (
+        <div className="flex flex-col gap-2 p-3 border rounded-lg">
+          <label className="text-sm font-medium">Nuova password</label>
+          <input
+            type="password"
+            className="border rounded-md px-3 py-2 text-sm"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="Minimo 6 caratteri"
+            minLength={6}
+          />
+          <label className="text-sm font-medium">Conferma password</label>
+          <input
+            type="password"
+            className="border rounded-md px-3 py-2 text-sm"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Ripeti la password"
+          />
+          <div className="flex gap-2 mt-2">
+            <Button
+              onClick={handleSavePassword}
+              disabled={loading}
+              className="flex-1 bg-gradient-primary"
+            >
+              {loading ? "Aggiornamento..." : "Aggiorna"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditingPassword(false);
+                setNewPassword("");
+                setConfirmPassword("");
+              }}
+              className="flex-1"
+            >
+              Annulla
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

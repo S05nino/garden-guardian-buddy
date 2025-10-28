@@ -1,114 +1,170 @@
 import { useState, useEffect } from "react";
 import { Preferences } from "@capacitor/preferences";
+import { v4 as uuidv4 } from "uuid";
+import { supabase } from "@/integrations/supabase/client";
 import { Plant, Weather } from "@/types/plant";
 import { updateHealthBasedOnWeather } from "@/lib/plantLogic";
-import { v4 as uuidv4 } from "uuid";
+import type { Json } from "@/integrations/supabase/types";
 
 const STORAGE_KEY = "garden-plants";
 
 export function usePlants(weather: Weather | null) {
   const [plants, setPlants] = useState<Plant[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
-  // 🪴 Carica piante da Capacitor Preferences al primo render
+  // 🔑 Recupera user Supabase
   useEffect(() => {
-    const loadPlants = async () => {
+    const fetchUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUserId(data.user?.id || null);
+    };
+    fetchUser();
+  }, []);
+
+  // 🌱 Carica piante (Supabase o cache)
+  useEffect(() => {
+    const load = async () => {
       try {
-        const { value } = await Preferences.get({ key: STORAGE_KEY });
-        if (value) {
-          const parsed = JSON.parse(value);
-          if (Array.isArray(parsed)) {
-            setPlants(parsed);
-          } else {
-            console.warn("Dati piante non validi, reset dello storage...");
-            await Preferences.remove({ key: STORAGE_KEY });
-          }
+        if (!userId) {
+          // Se non c'è utente, carica da cache locale
+          const { value } = await Preferences.get({ key: STORAGE_KEY });
+          if (value) setPlants(JSON.parse(value));
+          setLoaded(true);
+          return;
         }
-      } catch (error) {
-        console.error("Errore durante il caricamento delle piante:", error);
-        await Preferences.remove({ key: STORAGE_KEY });
+
+        const { data, error } = await supabase
+          .from("plants")
+          .select("*")
+          .eq("user_id", userId);
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          const mapped = data.map(toPlant);
+          setPlants(mapped);
+          await Preferences.set({ key: STORAGE_KEY, value: JSON.stringify(mapped) });
+        } else {
+          const { value } = await Preferences.get({ key: STORAGE_KEY });
+          if (value) setPlants(JSON.parse(value));
+        }
+      } catch (err) {
+        console.error("Errore caricamento piante:", err);
       } finally {
         setLoaded(true);
       }
     };
 
-    loadPlants();
-  }, []);
+    load();
+  }, [userId]);
 
-  // 💾 Salva SEMPRE su Preferences quando cambia lo stato (dopo caricamento)
+  // ☁️ Sincronizza su Supabase
   useEffect(() => {
-    if (!loaded) return; // Evita di sovrascrivere prima del primo caricamento
+    if (!loaded) return;
+    const sync = async () => {
+      await Preferences.set({ key: STORAGE_KEY, value: JSON.stringify(plants) });
 
-    const savePlants = async () => {
-      try {
-        await Preferences.set({
-          key: STORAGE_KEY,
-          value: JSON.stringify(plants),
-        });
-      } catch (error) {
-        console.error("Errore nel salvataggio delle piante:", error);
+      if (userId) {
+        for (const plant of plants) {
+          const record = toDbPlant(plant, userId);
+          const { error } = await supabase
+            .from("plants")
+            .upsert([record]);
+          if (error) console.warn("Errore sync pianta:", error);
+        }
       }
     };
+    sync();
+  }, [plants, loaded, userId]);
 
-    savePlants();
-  }, [plants, loaded]);
-
-  // 🌦️ Aggiorna automaticamente la salute delle piante in base al meteo
+  // 🌦️ Aggiorna salute basata sul meteo
   useEffect(() => {
     if (weather && plants.length > 0) {
-      setPlants((prev) =>
-        prev.map((plant) => updateHealthBasedOnWeather(plant, weather))
-      );
+      setPlants((prev) => prev.map((p) => updateHealthBasedOnWeather(p, weather)));
     }
   }, [weather]);
 
-  // ➕ Aggiunge una nuova pianta
-  const addPlant = (plant: Plant) => {
-    const completePlant: Plant = {
-      id: plant.id || uuidv4(),
-      ...plant,
-      wateringHistory: plant.wateringHistory || [],
-      createdAt: plant.createdAt || new Date().toISOString(),
-      totalWaterings: plant.totalWaterings || 0,
-      victories: plant.victories || 0,
-      defeats: plant.defeats || 0,
+  // ➕ Aggiungi
+  const addPlant = (p: Plant) => {
+    const newPlant: Plant = {
+      ...p,
+      id: p.id || uuidv4(),
+      createdAt: new Date().toISOString(),
+      totalWaterings: p.totalWaterings || 0,
+      victories: p.victories || 0,
+      defeats: p.defeats || 0,
     };
-
-    setPlants((prev) => [...prev, completePlant]);
+    setPlants((prev) => [...prev, newPlant]);
   };
 
-  // 🔄 Aggiorna i dati di una pianta
-  const updatePlant = (plantId: string, updates: Partial<Plant>) => {
-    setPlants((prev) =>
-      prev.map((p) => (p.id === plantId ? { ...p, ...updates } : p))
-    );
+  // 🔄 Aggiorna
+  const updatePlant = (id: string, updates: Partial<Plant>) =>
+    setPlants((prev) => prev.map((p) => (p.id === id ? { ...p, ...updates } : p)));
+
+  // ❌ Rimuovi
+  const removePlant = async (id: string) => {
+    setPlants((prev) => prev.filter((p) => p.id !== id));
+    if (userId) await supabase.from("plants").delete().eq("id", id);
   };
 
-  // ❌ Rimuove una pianta dal giardino
-  const removePlant = (plantId: string) => {
-    setPlants((prev) => prev.filter((p) => p.id !== plantId));
-  };
-
-  // ⚔️ Registra il risultato di una battaglia
+  // ⚔️ Battaglie
   const recordBattleResult = (winnerId: string, loserId: string) => {
     setPlants((prev) =>
       prev.map((p) => {
-        if (p.id === winnerId) {
-          return { ...p, victories: (p.victories || 0) + 1 };
-        }
-        if (p.id === loserId) {
-          return { ...p, defeats: (p.defeats || 0) + 1 };
-        }
+        if (p.id === winnerId) return { ...p, victories: (p.victories || 0) + 1 };
+        if (p.id === loserId) return { ...p, defeats: (p.defeats || 0) + 1 };
         return p;
       })
     );
   };
 
+  return { plants, addPlant, updatePlant, removePlant, recordBattleResult };
+}
+
+// 🔁 Helpers di mapping
+function toPlant(dbRow: any): Plant {
   return {
-    plants,
-    addPlant,
-    updatePlant,
-    removePlant,
-    recordBattleResult,
+    id: dbRow.id,
+    name: dbRow.name,
+    description: dbRow.description,
+    wateringDays: dbRow.watering_days,
+    position: dbRow.position,
+    icon: dbRow.icon || "🪴",
+    lastWatered: dbRow.last_watered || new Date().toISOString(),
+    health: dbRow.health ?? 100,
+    imageUrl: dbRow.image_url || undefined,
+    category: dbRow.category,
+    preferences: dbRow.preferences,
+    wateringHistory: dbRow.watering_history || [],
+    createdAt: dbRow.created_at,
+    totalWaterings: dbRow.total_waterings ?? 0,
+    remindersEnabled: dbRow.reminders_enabled ?? false,
+    victories: dbRow.victories ?? 0,
+    defeats: dbRow.defeats ?? 0,
+  };
+}
+
+function toDbPlant(plant: Plant, userId: string) {
+  return {
+    id: plant.id,
+    user_id: userId,
+    name: plant.name,
+    description: plant.description,
+    watering_days: plant.wateringDays,
+    position: plant.position,
+    icon: plant.icon,
+    last_watered: plant.lastWatered,
+    health: plant.health,
+    image_url: plant.imageUrl,
+    category: plant.category,
+    preferences: plant.preferences as Json,
+    watering_history: plant.wateringHistory as Json,
+    created_at: plant.createdAt,
+    total_waterings: plant.totalWaterings,
+    reminders_enabled: plant.remindersEnabled,
+    victories: plant.victories,
+    defeats: plant.defeats,
+    updated_at: new Date().toISOString(),
   };
 }

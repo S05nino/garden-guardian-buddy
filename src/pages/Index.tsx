@@ -7,17 +7,19 @@ import { PlantDetail } from "@/components/PlantDetail";
 import { AddPlantModal } from "@/components/AddPlantModal";
 import { ArenaModal } from "@/components/ArenaModal";
 import { PlantVisionModal } from "@/components/PlantVisionModal";
+import { AuthModal } from "@/components/AuthModal";
 import { useWeather } from "@/hooks/useWeather";
 import { usePlants } from "@/hooks/usePlants";
+import { useAuth } from "@/hooks/useAuth";
 import { Plant } from "@/types/plant";
 import { Plus, Leaf, Sparkles, User, Info } from "lucide-react";
 import { toast } from "sonner";
 import { shouldWater } from "@/lib/plantLogic";
-import { ca } from "date-fns/locale";
 
 const Index = () => {
   const { weather, loading: weatherLoading, refetch } = useWeather();
   const { plants, addPlant, updatePlant, removePlant } = usePlants(weather);
+  const { user } = useAuth();
   const [selectedPlant, setSelectedPlant] = useState<Plant | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showVisionModal, setShowVisionModal] = useState(false);
@@ -26,7 +28,7 @@ const Index = () => {
   const [visionMode, setVisionMode] = useState<"identify" | "diagnose">("identify");
   const [showArenaModal, setShowArenaModal] = useState(false);
   const [showTabBar, setShowTabBar] = useState(true);
-  const [showProfileInfo, setShowProfileInfo] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   useEffect(() => {
     let lastScrollY = window.scrollY;
@@ -80,15 +82,15 @@ const Index = () => {
               </div>
             </div>
 
-            {/* --- Bottone profilo / info in alto a destra --- */}
+            {/* --- Bottone profilo / autenticazione in alto a destra --- */}
             <div className="flex items-center gap-3">
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={() => setShowProfileInfo(true)}
-                aria-label="Informazioni sull'app"
+                onClick={() => setShowAuthModal(true)}
+                aria-label={user ? "Profilo utente" : "Accedi"}
                 className="rounded-full"
-                title="Informazioni App"
+                title={user ? "Profilo" : "Accedi"}
               >
                 <User className="h-5 w-5" />
               </Button>
@@ -270,146 +272,12 @@ const Index = () => {
         />
       )}
 
-      {/* Nuovo: Dialog Informazioni / Profilo con Release Notes */}
-      <Dialog open={showProfileInfo} onOpenChange={(open) => setShowProfileInfo(open)}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden">
-          <DialogHeader>
-            <div className="flex items-center justify-between w-full">
-              <DialogTitle className="flex items-center gap-2">
-                <User className="h-5 w-5 text-primary" />
-                Informazioni & Guida — Garden Buddy
-              </DialogTitle>
-              <div className="text-xs text-muted-foreground">v3.1</div>
-            </div>
-          </DialogHeader>
+      {/* Auth Modal */}
+      <AuthModal 
+        open={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
+      />
 
-          {/* Stato per gestire la scheda attiva */}
-          {(() => {
-            const [activeTab, setActiveTab] = useState<"guide" | "release">("guide");
-
-            return (
-              <>
-                {/* Tab switch */}
-                <div className="flex justify-around border-b mb-3">
-                  <button
-                    className={`flex-1 py-2 text-sm font-medium transition ${
-                      activeTab === "guide"
-                        ? "border-b-2 border-primary text-primary"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                    onClick={() => setActiveTab("guide")}
-                  >
-                    📖 Guida
-                  </button>
-                  <button
-                    className={`flex-1 py-2 text-sm font-medium transition ${
-                      activeTab === "release"
-                        ? "border-b-2 border-primary text-primary"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                    onClick={() => setActiveTab("release")}
-                  >
-                    📝 Release Notes
-                  </button>
-                </div>
-
-                {/* Contenuto scorrevole */}
-                <div className="space-y-4 py-2 overflow-y-auto pr-2 max-h-[60vh]">
-                  {activeTab === "guide" ? (
-                    <>
-                      <p className="text-sm text-muted-foreground">
-                        Benvenuto <strong>Garden Buddy</strong>! 🌱  
-                        Qui trovi una panoramica su come usare tutte le funzioni principali della tua app.
-                      </p>
-
-                      <section>
-                        <h4 className="font-semibold">🌿 Aggiungere piante</h4>
-                        <p className="text-sm text-muted-foreground">
-                          Usa il pulsante <strong>Aggiungi</strong> nella barra in basso per inserire manualmente una pianta,  
-                          oppure sfrutta <strong>AI Plant Doctor</strong> per identificarla da una foto.
-                        </p>
-                      </section>
-
-                      <section>
-                        <h4 className="font-semibold">🤖 AI Plant Doctor</h4>
-                        <p className="text-sm text-muted-foreground">
-                          Analizza le foto per riconoscere specie, preferenze ambientali e salute generale.  
-                          Puoi scegliere tra <strong>Identify</strong> (aggiungi) e <strong>Diagnose</strong> (aggiorna salute).
-                        </p>
-                      </section>
-
-                      <section>
-                        <h4 className="font-semibold">💧 Annaffiature & Notifiche</h4>
-                        <p className="text-sm text-muted-foreground">
-                          Ogni pianta ha un campo <code>wateringDays</code> per sapere ogni quanto va annaffiata.  
-                          Garden Buddy ti invia notifiche automatiche quando è il momento giusto!
-                        </p>
-                      </section>
-
-                      <section>
-                        <h4 className="font-semibold">⚔️ Arena</h4>
-                        <p className="text-sm text-muted-foreground">
-                          Fai combattere le tue piante in sfide divertenti 🌻.  
-                          Il loro <em>Rank</em> dipende dal tasso di vittorie:  
-                        </p>
-                        <ul className="text-sm text-muted-foreground list-disc list-inside mt-2">
-                          <li>🥇 <strong>Oro</strong> — win rate ≥ 75%</li>
-                          <li>🥈 <strong>Argento</strong> — 60–74%</li>
-                          <li>🥉 <strong>Bronzo</strong> — 40–59%</li>
-                          <li>🪵 <strong>Legno</strong> — 20–39%</li>
-                          <li>🌱 <strong>Seme</strong> — &lt; 20% o nessuna battaglia</li>
-                        </ul>
-                      </section>
-
-                      <section>
-                        <h4 className="font-semibold">ℹ️ Nota tecnica</h4>
-                        <p className="text-sm text-muted-foreground">
-                          Al momento non c’è ancora un profilo utente persistente:  
-                          questo tasto funge da guida e info center.  
-                          In futuro potrai visualizzare qui le tue statistiche globali 🌍.
-                        </p>
-                      </section>
-                    </>
-                  ) : (
-                    <>
-                      <h4 className="font-semibold text-lg mb-2">🚀 Novità della versione 3.0</h4>
-                      <ul className="space-y-3 text-sm text-muted-foreground">
-                        <li>
-                          🌱 <strong>Nuova barra inferiore</strong> —  
-                          i pulsanti per aggiungere piante e accedere all’AI sono ora nella <em>tab bar</em> per una navigazione più semplice.
-                        </li>
-                        <li>
-                          🤖 <strong>AI migliorata</strong> —  
-                          ora rileva solo vere piante e aggiunge automaticamente al giardino solo ciò che riconosce.  
-                          Abbiamo anche ampliato le <em>categorie</em> disponibili!
-                        </li>
-                        <li>
-                          🧹 <strong>Bug fix</strong> —  
-                          risolti diversi errori segnalati nelle varie schermate e funzionalità dell’app.
-                        </li>
-                        <li>
-                          ⚔️ <strong>Nuova Arena</strong> —  
-                          più interattiva e con nuovi sistemi di ranking 🌟, oltre a più piante da sfidare!
-                        </li>
-                        <li>
-                          ℹ️ <strong>Info Button</strong> —  
-                          ora puoi accedere direttamente a questa guida e alle note di rilascio tramite l’icona in alto a destra.
-                        </li>
-                      </ul>
-
-                      <p className="text-sm text-muted-foreground mt-4">
-                        🌍 <strong>Prossimi passi:</strong>  
-                        stiamo lavorando per rendere possibile l’interazione tra utenti —  
-                        presto potrai condividere i tuoi progressi e confrontare il tuo giardino con quello dei tuoi amici! 💬
-                      </p>
-                    </>
-                  )}
-                </div>
-              </>
-            );
-          })()}
-        </DialogContent>
-      </Dialog>
 
       {/* Bottom Tab Bar (solo mobile) */}
       <nav

@@ -11,6 +11,7 @@ import {
   waterPlant,
   calculateAdjustedWateringDays,
 } from "@/lib/plantLogic";
+import { scheduleWateringReminder } from "@/lib/notifications";
 import { Droplets, Heart, MapPin, Calendar, Trash2, X, BarChart3, Bell, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useMemo, useState, useEffect } from "react";
@@ -66,10 +67,23 @@ const daysSinceWatered = useMemo(() => {
     [localPlant, weather]
   );
 
-  const handleWater = () => {
+  const handleWater = async () => {
     const result = waterPlant(localPlant, weather);
     setLocalPlant(result.plant); // Aggiorna immediatamente lo stato locale
     onUpdate(localPlant.id, result.plant); // Aggiorna anche il parent
+    
+    // Riprogramma la notifica se i promemoria sono abilitati
+    if (result.plant.remindersEnabled) {
+      const newWaterLevel = getWaterLevel(result.plant);
+      const adjustedDaysValue = weather ? calculateAdjustedWateringDays(result.plant, weather) : result.plant.wateringDays;
+      const hoursRemaining = newWaterLevel * adjustedDaysValue * 24;
+      
+      try {
+        await scheduleWateringReminder(result.plant.name, hoursRemaining > 0 ? hoursRemaining : 0);
+      } catch (error) {
+        console.error("Error rescheduling reminder:", error);
+      }
+    }
     
     if (result.message.includes("⚠️")) {
       toast.warning(result.message);
@@ -257,7 +271,7 @@ const daysSinceWatered = useMemo(() => {
                         {adjustedDays === 1 ? "giorno" : "giorni"}
                       </p>
                     )}
-                    {waterLevel < 0.3 && (
+                    {waterLevel <= 0.10 && (
                       <Badge variant="destructive" className="mt-2">
                         Serve acqua ora!
                       </Badge>

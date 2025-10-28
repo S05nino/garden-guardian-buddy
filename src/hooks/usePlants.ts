@@ -34,6 +34,7 @@ export function usePlants(weather: Weather | null) {
           return;
         }
 
+        console.log("🔍 Caricamento piante per user_id:", userId);
         const { data, error } = await supabase
           .from("plants")
           .select("*")
@@ -42,10 +43,12 @@ export function usePlants(weather: Weather | null) {
         if (error) throw error;
 
         if (data && data.length > 0) {
+          console.log("✅ Caricate", data.length, "piante per l'utente");
           const mapped = data.map(toPlant);
           setPlants(mapped);
           await Preferences.set({ key: STORAGE_KEY, value: JSON.stringify(mapped) });
         } else {
+          console.log("ℹ️ Nessuna pianta trovata su Supabase, carico cache locale");
           const { value } = await Preferences.get({ key: STORAGE_KEY });
           if (value) setPlants(JSON.parse(value));
         }
@@ -98,12 +101,14 @@ export function usePlants(weather: Weather | null) {
     
     // Se l'utente è loggato, salva immediatamente su Supabase
     if (userId) {
+      console.log("💾 Salvataggio pianta per user_id:", userId, "pianta:", newPlant.name);
       const record = toDbPlant(newPlant, userId);
       const { error } = await supabase.from("plants").insert([record]);
       if (error) {
-        console.error("Errore aggiunta pianta:", error);
+        console.error("❌ Errore aggiunta pianta:", error);
         return;
       }
+      console.log("✅ Pianta salvata su Supabase");
     }
     
     setPlants((prev) => [...prev, newPlant]);

@@ -11,6 +11,7 @@ import {
   getWaterLevel,
 } from '@/lib/plantLogic';
 import {
+  checkNotificationPermission,
   ensureNotificationPermission,
   scheduleWateringReminder,
   cancelWateringReminder,
@@ -29,10 +30,12 @@ export function ReminderSettings({ plant, weather, onUpdate }: ReminderSettingsP
   const isNative = Capacitor.isNativePlatform();
 
   useEffect(() => {
-    if (!isNative && 'Notification' in window) {
-      setPermission(Notification.permission as 'granted' | 'denied' | 'default');
-    }
-  }, [isNative]);
+    const checkPermission = async () => {
+      const result = await checkNotificationPermission();
+      setPermission(result);
+    };
+    checkPermission();
+  }, []);
 
   useEffect(() => {
     setNotificationsEnabled(plant.remindersEnabled || false);

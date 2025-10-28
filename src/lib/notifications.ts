@@ -8,6 +8,27 @@ import type { Plant, Weather } from "@/types/plant";
  * Richiede i permessi di notifica.
  * Su Android/iOS usa Capacitor LocalNotifications, su Web Notification API.
  */
+/**
+ * Check notification permission status without requesting it
+ */
+export async function checkNotificationPermission(): Promise<'granted' | 'denied' | 'default'> {
+  try {
+    if (Capacitor.isNativePlatform()) {
+      const permission = await LocalNotifications.checkPermissions();
+      return permission.display === 'granted' ? 'granted' : permission.display === 'denied' ? 'denied' : 'default';
+    } else if ('Notification' in window) {
+      return Notification.permission as 'granted' | 'denied' | 'default';
+    }
+    return 'default';
+  } catch (error) {
+    console.error('Error checking notification permission:', error);
+    return 'default';
+  }
+}
+
+/**
+ * Ensures notification permissions are granted, requesting them if necessary
+ */
 export async function ensureNotificationPermission(): Promise<'granted' | 'denied'> {
   try {
     if (Capacitor.isNativePlatform()) {

@@ -22,14 +22,15 @@ export function usePlants(weather: Weather | null) {
     fetchUser();
   }, []);
 
-  // 🌱 Carica piante (Supabase o cache)
+  // 🌱 Carica piante (solo se c'è un utente loggato)
   useEffect(() => {
     const load = async () => {
       try {
         if (!userId) {
-          // Se non c'è utente, carica da cache locale
-          const { value } = await Preferences.get({ key: STORAGE_KEY });
-          if (value) setPlants(JSON.parse(value));
+          // Se non c'è utente, svuota le piante
+          console.log("❌ Nessun utente loggato, svuoto le piante");
+          setPlants([]);
+          await Preferences.remove({ key: STORAGE_KEY });
           setLoaded(true);
           return;
         }
@@ -48,12 +49,12 @@ export function usePlants(weather: Weather | null) {
           setPlants(mapped);
           await Preferences.set({ key: STORAGE_KEY, value: JSON.stringify(mapped) });
         } else {
-          console.log("ℹ️ Nessuna pianta trovata su Supabase, carico cache locale");
-          const { value } = await Preferences.get({ key: STORAGE_KEY });
-          if (value) setPlants(JSON.parse(value));
+          console.log("ℹ️ Nessuna pianta trovata su Supabase per questo utente");
+          setPlants([]);
         }
       } catch (err) {
         console.error("Errore caricamento piante:", err);
+        setPlants([]);
       } finally {
         setLoaded(true);
       }
@@ -62,20 +63,18 @@ export function usePlants(weather: Weather | null) {
     load();
   }, [userId]);
 
-  // ☁️ Sincronizza su Supabase
+  // ☁️ Sincronizza su Supabase (solo se c'è un utente)
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || !userId) return;
     const sync = async () => {
       await Preferences.set({ key: STORAGE_KEY, value: JSON.stringify(plants) });
 
-      if (userId) {
-        for (const plant of plants) {
-          const record = toDbPlant(plant, userId);
-          const { error } = await supabase
-            .from("plants")
-            .upsert([record]);
-          if (error) console.warn("Errore sync pianta:", error);
-        }
+      for (const plant of plants) {
+        const record = toDbPlant(plant, userId);
+        const { error } = await supabase
+          .from("plants")
+          .upsert([record]);
+        if (error) console.warn("Errore sync pianta:", error);
       }
     };
     sync();

@@ -1,40 +1,50 @@
 import { useState, useEffect } from "react";
-import { Preferences } from "@capacitor/preferences";
 import { v4 as uuidv4 } from "uuid";
 import { supabase } from "@/integrations/supabase/client";
 import { Plant, Weather } from "@/types/plant";
 import { updateHealthBasedOnWeather } from "@/lib/plantLogic";
 import type { Json } from "@/integrations/supabase/types";
 
-const STORAGE_KEY = "garden-plants";
-
 export function usePlants(weather: Weather | null) {
   const [plants, setPlants] = useState<Plant[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
-  // 🔑 Recupera user Supabase
+  // 🔑 Listener per cambiamenti di autenticazione
   useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const newUserId = session?.user?.id || null;
+      setUserId(newUserId);
+      
+      // Se l'utente fa logout, svuota immediatamente le piante
+      if (!newUserId) {
+        console.log("❌ Logout rilevato, svuoto le piante");
+        setPlants([]);
+        setLoaded(true);
+      }
+    });
+
+    // Recupera user iniziale
     const fetchUser = async () => {
       const { data } = await supabase.auth.getUser();
       setUserId(data.user?.id || null);
     };
     fetchUser();
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  // 🌱 Carica piante (solo se c'è un utente loggato)
+  // 🌱 Carica piante quando cambia userId
   useEffect(() => {
     const load = async () => {
-      try {
-        if (!userId) {
-          // Se non c'è utente, svuota le piante
-          console.log("❌ Nessun utente loggato, svuoto le piante");
-          setPlants([]);
-          await Preferences.remove({ key: STORAGE_KEY });
-          setLoaded(true);
-          return;
-        }
+      if (!userId) {
+        // Se non c'è utente, assicurati che le piante siano vuote
+        setPlants([]);
+        setLoaded(true);
+        return;
+      }
 
+      try {
         console.log("🔍 Caricamento piante per user_id:", userId);
         const { data, error } = await supabase
           .from("plants")
@@ -47,7 +57,6 @@ export function usePlants(weather: Weather | null) {
           console.log("✅ Caricate", data.length, "piante per l'utente");
           const mapped = data.map(toPlant);
           setPlants(mapped);
-          await Preferences.set({ key: STORAGE_KEY, value: JSON.stringify(mapped) });
         } else {
           console.log("ℹ️ Nessuna pianta trovata su Supabase per questo utente");
           setPlants([]);
@@ -63,12 +72,11 @@ export function usePlants(weather: Weather | null) {
     load();
   }, [userId]);
 
-  // ☁️ Sincronizza su Supabase (solo se c'è un utente)
+  // ☁️ Sincronizza su Supabase quando cambiano le piante
   useEffect(() => {
-    if (!loaded || !userId) return;
+    if (!loaded || !userId || plants.length === 0) return;
+    
     const sync = async () => {
-      await Preferences.set({ key: STORAGE_KEY, value: JSON.stringify(plants) });
-
       for (const plant of plants) {
         const record = toDbPlant(plant, userId);
         const { error } = await supabase
@@ -89,6 +97,11 @@ export function usePlants(weather: Weather | null) {
 
   // ➕ Aggiungi
   const addPlant = async (p: Plant) => {
+    if (!userId) {
+      console.error("❌ Impossibile aggiungere pianta: utente non loggato");
+      return;
+    }
+
     const newPlant: Plant = {
       ...p,
       id: p.id || uuidv4(),
@@ -98,17 +111,14 @@ export function usePlants(weather: Weather | null) {
       defeats: p.defeats || 0,
     };
     
-    // Se l'utente è loggato, salva immediatamente su Supabase
-    if (userId) {
-      console.log("💾 Salvataggio pianta per user_id:", userId, "pianta:", newPlant.name);
-      const record = toDbPlant(newPlant, userId);
-      const { error } = await supabase.from("plants").insert([record]);
-      if (error) {
-        console.error("❌ Errore aggiunta pianta:", error);
-        return;
-      }
-      console.log("✅ Pianta salvata su Supabase");
+    console.log("💾 Salvataggio pianta per user_id:", userId, "pianta:", newPlant.name);
+    const record = toDbPlant(newPlant, userId);
+    const { error } = await supabase.from("plants").insert([record]);
+    if (error) {
+      console.error("❌ Errore aggiunta pianta:", error);
+      return;
     }
+    console.log("✅ Pianta salvata su Supabase");
     
     setPlants((prev) => [...prev, newPlant]);
   };

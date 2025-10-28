@@ -473,7 +473,7 @@ const Index = () => {
                 )}
                 {user ? "Profilo & Info — Garden Buddy" : "Informazioni & Guida — Garden Buddy"}
               </DialogTitle>
-              <div className="text-xs text-muted-foreground">v3.1</div>
+              <div className="text-xs text-muted-foreground">v4.0</div>
             </div>
           </DialogHeader>
 
@@ -647,10 +647,18 @@ const Index = () => {
                       </section>
 
                       <section>
+                        <h4 className="font-semibold">👥 Buddies</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Aggiungi amici condividendo il tuo <strong>ID utente</strong> (disponibile nel tuo profilo).  
+                          Una volta aggiunti, puoi vedere le loro piante e sfidarli nell'Arena!
+                        </p>
+                      </section>
+
+                      <section>
                         <h4 className="font-semibold">⚔️ Arena</h4>
                         <p className="text-sm text-muted-foreground">
                           Fai combattere le tue piante in sfide divertenti 🌻.  
-                          Il loro <em>Rank</em> dipende dal tasso di vittorie:  
+                          Allenati contro il computer oppure sfida i tuoi <strong>Buddies</strong> per salire in classifica!
                         </p>
                         <ul className="text-sm text-muted-foreground list-disc list-inside mt-2">
                           <li>🥇 <strong>Oro</strong> — win rate ≥ 75%</li>
@@ -671,34 +679,33 @@ const Index = () => {
                     </>
                   ) : (
                     <>
-                      <h4 className="font-semibold text-lg mb-2">🚀 Novità della versione 3.1</h4>
+                      <h4 className="font-semibold text-lg mb-2">🚀 Novità della versione 4.0</h4>
                       <ul className="space-y-3 text-sm text-muted-foreground">
                         <li>
-                          👤 <strong>Sistema di autenticazione</strong> —  
-                          ora puoi registrarti e fare login per salvare le tue piante nel cloud!
+                          👥 <strong>Sistema Buddies</strong> —  
+                          aggiungi amici tramite ID utente e visualizza le loro piante!
                         </li>
                         <li>
-                          ☁️ <strong>Sincronizzazione cloud</strong> —  
-                          le tue piante vengono salvate automaticamente e sincronizzate tra dispositivi.
+                          ⚔️ <strong>Sfide tra amici</strong> —  
+                          dalla sezione Buddies puoi sfidare i tuoi amici nell'Arena e vedere chi ha le piante più forti!
                         </li>
                         <li>
-                          📊 <strong>Profilo personalizzato</strong> —  
-                          visualizza le tue statistiche, modifica il tuo nome e controlla il tuo giardino.
+                          📊 <strong>Classifica online</strong> —  
+                          le partite contro i tuoi Buddies contano per la classifica globale. Allenati vs computer e poi sfida i tuoi amici!
                         </li>
                         <li>
-                          🌱 <strong>Nuova barra inferiore</strong> —  
-                          i pulsanti per aggiungere piante e accedere all'AI sono ora nella <em>tab bar</em> per una navigazione più semplice.
+                          🏆 <strong>Storico battaglie</strong> —  
+                          rivedi tutte le tue sfide passate e tieni traccia delle tue vittorie.
                         </li>
                         <li>
-                          🤖 <strong>AI migliorata</strong> —  
-                          ora rileva solo vere piante e aggiunge automaticamente al giardino solo ciò che riconosce.
+                          🎮 <strong>Arena rinnovata</strong> —  
+                          gioca contro il computer per allenarti, poi scala la classifica sfidando utenti reali!
                         </li>
                       </ul>
 
                       <p className="text-sm text-muted-foreground mt-4">
                         🌍 <strong>Prossimi passi:</strong>  
-                        stiamo lavorando per rendere possibile l'interazione tra utenti —  
-                        presto potrai condividere i tuoi progressi e confrontare il tuo giardino con quello dei tuoi amici! 💬
+                        continueremo a migliorare l'esperienza multiplayer con nuove modalità di sfida e premi stagionali! 🎁
                       </p>
                     </>
                   )}

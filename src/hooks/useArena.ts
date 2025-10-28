@@ -2,14 +2,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 export function useArena() {
   // 🔹 Avvia una nuova battaglia
-  const startBattle = async (challengerPlantId: string, defenderPlantId: string, defenderUserId: string) => {
+  const startBattle = async (challengerPlantId: string, defenderPlantId: string, defenderUserId: string, winnerId: string) => {
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) throw new Error("Devi essere loggato per combattere!");
-
-    // Esempio logica base: punteggio casuale
-    const challengerScore = Math.random();
-    const defenderScore = Math.random();
-    const winnerId = challengerScore > defenderScore ? user.id : defenderUserId;
 
     const { error } = await supabase.from("arena_battles").insert({
       challenger_id: user.id,
@@ -17,15 +12,12 @@ export function useArena() {
       challenger_plant_id: challengerPlantId,
       defender_plant_id: defenderPlantId,
       winner_id: winnerId,
-      battle_log: {
-        challengerScore,
-        defenderScore,
-      },
+      battle_log: {},
     });
 
     if (error) throw error;
 
-    return { winnerId, challengerScore, defenderScore };
+    return { winnerId };
   };
 
   // 🔹 Recupera battaglie passate dell'utente con dettagli

@@ -6,6 +6,7 @@ import { Leaf, Info } from "lucide-react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useArena } from "@/hooks/useArena";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Move {
   name: string;
@@ -58,6 +59,7 @@ export const ArenaModal = ({ open, onClose, plants, updatePlant, friendChallenge
   const [viewMode, setViewMode] = useState<"select" | "history" | "leaderboard">("select");
   const [historyData, setHistoryData] = useState<any[]>([]);
   const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   if (!open) return null;
 
@@ -359,11 +361,18 @@ export const ArenaModal = ({ open, onClose, plants, updatePlant, friendChallenge
     // 🔹 Salva su Supabase SOLO se è una sfida tra amici
     if (friendChallenge) {
       try {
+        // Determina il winnerId corretto
+        const user = (await supabase.auth.getUser()).data.user;
+        if (!user) return;
+        
+        const winnerId = isPlayerWinner ? user.id : friendChallenge.friendUserId;
+        
         // Salva la battaglia
         await startBattle(
           playerPlant.id,
           enemyPlant.id,
-          friendChallenge.friendUserId
+          friendChallenge.friendUserId,
+          winnerId
         );
         
         // Aggiorna statistiche di entrambe le piante nel database
@@ -421,6 +430,12 @@ export const ArenaModal = ({ open, onClose, plants, updatePlant, friendChallenge
 
   const loadHistory = async () => {
     try {
+      // Ottieni l'user_id corrente
+      const user = (await supabase.auth.getUser()).data.user;
+      if (user) {
+        setCurrentUserId(user.id);
+      }
+      
       const battles = await getUserBattles();
       setHistoryData(battles);
       setViewMode("history");
@@ -475,8 +490,8 @@ export const ArenaModal = ({ open, onClose, plants, updatePlant, friendChallenge
               ) : (
                 <div className="space-y-3 max-h-[500px] overflow-y-auto">
                   {historyData.map((battle: any) => {
-                    const isChallenger = battle.challenger_id === battle.challenger?.user_id;
-                    const isWinner = battle.winner_id === (isChallenger ? battle.challenger_id : battle.defender_id);
+                    // Determina se l'utente corrente è il vincitore
+                    const isWinner = battle.winner_id === currentUserId;
                     
                     return (
                       <Card key={battle.id} className={`p-4 ${isWinner ? 'border-green-500/50' : 'border-red-500/50'}`}>

@@ -461,8 +461,8 @@ export const ArenaModal = ({ open, onClose, plants, updatePlant, friendChallenge
       <Card className="max-w-4xl w-full bg-card shadow-2xl rounded-2xl overflow-hidden">
         <CardContent className="p-6">
 
-          {/* 🔹 Pulsanti Supabase: Storico / Classifica (solo per sfide tra amici) */}
-          {!battleStarted && !preparingBattle && friendChallenge && viewMode === "select" && (
+          {/* 🔹 Pulsanti Supabase: Storico / Classifica */}
+          {!battleStarted && !preparingBattle && viewMode === "select" && (
             <div className="flex justify-end gap-2 mb-3">
               <Button variant="outline" onClick={loadHistory}>
                 📜 Storico

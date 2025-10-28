@@ -50,12 +50,35 @@ export function useFriends() {
         return false;
       }
 
-      // Verifica che il profilo esista
+      // Verifica che il profilo dell'utente corrente esista
+      const { data: currentUserProfile } = await supabase
+        .from("profiles")
+        .select("user_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!currentUserProfile) {
+        // Crea il profilo se non esiste
+        const { error: createError } = await supabase
+          .from("profiles")
+          .insert({
+            user_id: user.id,
+            full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || "Utente"
+          });
+        
+        if (createError) {
+          toast.error("Errore nella creazione del profilo");
+          console.error("Errore creazione profilo:", createError);
+          return false;
+        }
+      }
+
+      // Verifica che il profilo dell'amico esista
       const { data: profile } = await supabase
         .from("profiles")
         .select("user_id, full_name")
         .eq("user_id", friendUserId)
-        .single();
+        .maybeSingle();
 
       if (!profile) {
         toast.error("ID utente non valido");

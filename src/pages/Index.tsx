@@ -16,6 +16,7 @@ import { shouldWater } from "@/lib/plantLogic";
 import { AuthModal } from "@/components/AuthModal";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { NotificationBell } from "@/components/NotificationBell";
 
 function EditProfileSection({
   currentName,
@@ -258,6 +259,7 @@ const Index = () => {
             {/* Bottone profilo: iniziali se loggato, icona se guest.
                 Clic: se loggato -> apre Info/Dialog con tab Profilo; se guest -> AuthModal */}
             <div className="flex items-center gap-3">
+              {user && <NotificationBell />}
               <Button
                 size="icon"
                 variant="ghost"

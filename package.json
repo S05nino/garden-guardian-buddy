@@ -53,7 +53,7 @@
     "cmdk": "^1.1.1",
     "cordova-plugin-background-mode": "^0.7.3",
     "cordova-plugin-device": "^3.0.0",
-    "date-fns": "^3.6.0",
+    "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.23.22",
     "input-otp": "^1.4.2",

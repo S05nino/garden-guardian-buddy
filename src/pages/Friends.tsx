@@ -193,8 +193,8 @@ export default function Friends() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-40">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
+        <div className="container mx-auto px-8 py-10">
+          <div className="flex items-center gap-3 mt-6">
             <Button
               variant="ghost"
               size="icon"

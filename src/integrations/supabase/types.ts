@@ -314,6 +314,10 @@ export type Database = {
           wins: number
         }[]
       }
+      increment_plant_stat: {
+        Args: { plant_uuid: string; stat_name: string }
+        Returns: undefined
+      }
     }
     Enums: {
       battle_status: "waiting" | "active" | "finished"

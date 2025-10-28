@@ -33,20 +33,45 @@ export function useArena() {
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) return [];
     
-    const { data, error } = await supabase
+    const { data: battles, error } = await supabase
       .from("arena_battles")
-      .select(`
-        *,
-        challenger:profiles!arena_battles_challenger_id_fkey(full_name),
-        defender:profiles!arena_battles_defender_id_fkey(full_name),
-        challenger_plant:plants!arena_battles_challenger_plant_id_fkey(name, icon),
-        defender_plant:plants!arena_battles_defender_plant_id_fkey(name, icon)
-      `)
+      .select("*")
       .or(`challenger_id.eq.${user.id},defender_id.eq.${user.id}`)
       .order("created_at", { ascending: false });
 
     if (error) throw error;
-    return data;
+    if (!battles || battles.length === 0) return [];
+
+    // Fetch profiles separately
+    const userIds = [...new Set([
+      ...battles.map(b => b.challenger_id),
+      ...battles.map(b => b.defender_id)
+    ])];
+    
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("user_id, full_name")
+      .in("user_id", userIds);
+
+    // Fetch plants separately
+    const plantIds = [...new Set([
+      ...battles.map(b => b.challenger_plant_id),
+      ...battles.map(b => b.defender_plant_id)
+    ])];
+    
+    const { data: plants } = await supabase
+      .from("plants")
+      .select("id, name, icon")
+      .in("id", plantIds);
+
+    // Merge data
+    return battles.map(battle => ({
+      ...battle,
+      challenger: profiles?.find(p => p.user_id === battle.challenger_id),
+      defender: profiles?.find(p => p.user_id === battle.defender_id),
+      challenger_plant: plants?.find(p => p.id === battle.challenger_plant_id),
+      defender_plant: plants?.find(p => p.id === battle.defender_plant_id)
+    }));
   };
 
   // 🔹 Classifica globale con nomi utenti
@@ -73,22 +98,16 @@ export function useArena() {
 
   // 🔹 Aggiorna statistiche piante dopo battaglia
   const updatePlantStats = async (plantId: string, isWinner: boolean) => {
-    const field = isWinner ? "victories" : "defeats";
+    const statName = isWinner ? "victories" : "defeats";
     
-    const { data: currentPlant } = await supabase
-      .from("plants")
-      .select(field)
-      .eq("id", plantId)
-      .single();
+    const { error } = await supabase.rpc("increment_plant_stat", {
+      plant_uuid: plantId,
+      stat_name: statName
+    });
     
-    if (currentPlant) {
-      const newValue = (currentPlant[field] || 0) + 1;
-      const { error } = await supabase
-        .from("plants")
-        .update({ [field]: newValue })
-        .eq("id", plantId);
-      
-      if (error) console.error("Errore aggiornamento statistiche pianta:", error);
+    if (error) {
+      console.error("Errore aggiornamento statistiche pianta:", error);
+      throw error;
     }
   };
 

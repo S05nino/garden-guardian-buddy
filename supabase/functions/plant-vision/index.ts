@@ -25,106 +25,24 @@ serve(async (req) => {
     }
 
     const systemPrompt = mode === "diagnose" 
-      ? `Sei un esperto di malattie delle piante. Analizza l'immagine della pianta fornita.`
-      : `Sei un esperto di identificazione delle piante. Analizza l'immagine fornita e determina se contiene una pianta.`;
+      ? `Sei un esperto di malattie delle piante. Analizza l'immagine della pianta e fornisci SOLO un oggetto JSON valido con:
+- overallHealth: "healthy", "fair", o "poor"
+- problems: array di {issue, severity ("low"/"medium"/"high"), cause, solution}
+- recommendations: array di consigli per la cura
+Non aggiungere altro testo, solo JSON.`
+      : `Sei un esperto di identificazione delle piante. Se l'immagine contiene una pianta, fornisci SOLO un oggetto JSON valido con:
+- name: nome comune in italiano
+- scientificName: nome botanico
+- category: tipo (herbs/succulents/flowers/vegetables/indoor/aquatic/ornamental)
+- description: breve descrizione delle cure
+- position: "sun", "partial_sun", o "shade"
+- wateringDays: numero tra 1-14
+- preferences: {minTemp, maxTemp, minHumidity, maxHumidity}
+- initialHealth: numero 80-100
+- confidence: numero 0-1
 
-    const tools = mode === "diagnose" ? [
-      {
-        type: "function",
-        function: {
-          name: "diagnose_plant",
-          description: "Diagnostica lo stato di salute di una pianta",
-          parameters: {
-            type: "object",
-            properties: {
-              overallHealth: {
-                type: "string",
-                enum: ["healthy", "fair", "poor"],
-                description: "Stato di salute generale della pianta"
-              },
-              problems: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    issue: { type: "string", description: "Problema riscontrato" },
-                    severity: { type: "string", enum: ["low", "medium", "high"] },
-                    cause: { type: "string", description: "Causa del problema" },
-                    solution: { type: "string", description: "Soluzione consigliata" }
-                  },
-                  required: ["issue", "severity", "cause", "solution"]
-                }
-              },
-              recommendations: {
-                type: "array",
-                items: { type: "string" },
-                description: "Consigli per la cura"
-              }
-            },
-            required: ["overallHealth", "problems", "recommendations"]
-          }
-        }
-      }
-    ] : [
-      {
-        type: "function",
-        function: {
-          name: "identify_plant",
-          description: "Identifica una pianta dall'immagine. Usa questa funzione SOLO se l'immagine contiene effettivamente una pianta.",
-          parameters: {
-            type: "object",
-            properties: {
-              name: { type: "string", description: "Nome comune della pianta in italiano" },
-              scientificName: { type: "string", description: "Nome scientifico botanico" },
-              category: { 
-                type: "string", 
-                enum: ["herbs", "succulents", "flowers", "vegetables", "indoor", "aquatic", "ornamental"],
-                description: "Categoria della pianta"
-              },
-              description: { type: "string", description: "Breve descrizione delle cure necessarie" },
-              position: { 
-                type: "string",
-                enum: ["sun", "partial_sun", "shade"],
-                description: "Posizione preferita"
-              },
-              wateringDays: { 
-                type: "number",
-                description: "Giorni tra un'annaffiatura e l'altra (1-14)",
-                minimum: 1,
-                maximum: 14
-              },
-              preferences: {
-                type: "object",
-                properties: {
-                  minTemp: { type: "number", description: "Temperatura minima ideale in °C" },
-                  maxTemp: { type: "number", description: "Temperatura massima ideale in °C" },
-                  minHumidity: { type: "number", description: "Umidità minima ideale in %" },
-                  maxHumidity: { type: "number", description: "Umidità massima ideale in %" }
-                },
-                required: ["minTemp", "maxTemp", "minHumidity", "maxHumidity"]
-              },
-              initialHealth: { 
-                type: "number",
-                description: "Salute iniziale (80-100)",
-                minimum: 80,
-                maximum: 100
-              },
-              confidence: {
-                type: "number",
-                description: "Livello di confidenza nell'identificazione (0-1)",
-                minimum: 0,
-                maximum: 1
-              }
-            },
-            required: ["name", "scientificName", "category", "description", "position", "wateringDays", "preferences", "initialHealth", "confidence"]
-          }
-        }
-      }
-    ];
-
-    const userMessage = mode === "diagnose" 
-      ? "Diagnostica lo stato di salute di questa pianta e fornisci consigli."
-      : "Se questa immagine contiene una pianta, identificala e fornisci le informazioni richieste. Se NON contiene una pianta, rispondi semplicemente con un messaggio che indica che non è stata rilevata alcuna pianta.";
+Se NON è una pianta, rispondi: {"error": "no_plant", "message": "Nessuna pianta rilevata"}
+Non aggiungere altro testo, solo JSON.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -139,54 +57,66 @@ serve(async (req) => {
           {
             role: "user",
             content: [
-              { type: "text", text: userMessage },
+              { type: "text", text: mode === "diagnose" ? "Diagnostica questa pianta" : "Identifica questa pianta" },
               { type: "image_url", image_url: { url: image } }
             ]
           }
         ],
-        tools: tools,
-        tool_choice: "auto"
       }),
     });
 
     if (!response.ok) {
       const error = await response.text();
-      console.error("AI API error:", error);
+      console.error("AI API error:", response.status, error);
       throw new Error(`AI API error: ${response.status}`);
     }
 
     const data = await response.json();
-    const message = data.choices?.[0]?.message;
+    const content = data.choices?.[0]?.message?.content;
 
-    if (!message) {
+    if (!content) {
       throw new Error("No response from AI");
     }
 
-    // Se l'AI ha usato un tool call, estrai i dati
-    if (message.tool_calls && message.tool_calls.length > 0) {
-      const toolCall = message.tool_calls[0];
-      const result = JSON.parse(toolCall.function.arguments);
-      console.log("Plant identified via tool call:", result);
-      return new Response(JSON.stringify(result), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    console.log("Raw AI response:", content);
+
+    // Estrai JSON dalla risposta
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      // Se non trova JSON, probabilmente non è una pianta
+      return new Response(
+        JSON.stringify({ 
+          error: "no_plant_detected",
+          message: "Nessuna pianta rilevata nell'immagine. Prova con un'altra foto." 
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200
+        }
+      );
     }
 
-    // Altrimenti, l'AI ha risposto in testo normale (probabilmente "nessuna pianta")
-    const content = message.content || "";
-    console.log("AI response (no tool call):", content);
+    const result = JSON.parse(jsonMatch[0]);
     
-    // Restituisci un messaggio di errore strutturato
-    return new Response(
-      JSON.stringify({ 
-        error: "no_plant_detected",
-        message: "Nessuna pianta rilevata nell'immagine. Prova con un'altra foto." 
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200
-      }
-    );
+    // Se c'è un errore nel JSON, gestiscilo
+    if (result.error === "no_plant") {
+      return new Response(
+        JSON.stringify({ 
+          error: "no_plant_detected",
+          message: result.message || "Nessuna pianta rilevata nell'immagine. Prova con un'altra foto." 
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200
+        }
+      );
+    }
+
+    console.log("Parsed result:", result);
+    
+    return new Response(JSON.stringify(result), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("Error:", error);
     return new Response(

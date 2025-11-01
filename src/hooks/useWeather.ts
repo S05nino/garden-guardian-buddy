@@ -24,9 +24,6 @@ export function useWeather() {
       console.log("Dati meteo ottenuti:", weatherData);
       
       setWeather(weatherData);
-      toast.success("Meteo aggiornato", {
-        description: `${weatherData.location}: ${weatherData.temp}°C`,
-      });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Errore nel recupero meteo";
       setError(message);

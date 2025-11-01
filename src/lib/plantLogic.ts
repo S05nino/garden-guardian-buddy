@@ -143,30 +143,36 @@ export function shouldWater(plant: Plant, weather: Weather | null): boolean {
   const waterLevel = getWaterLevel(plant);
   
   // Urgenza base
-  if (waterLevel < 0.2) return true;
+  if (waterLevel < 0.1) return true;
   
   // Considera meteo (solo se preferences esiste)
   if (weather && plant.preferences) {
     // Con caldo eccessivo, anticipa l'annaffiatura
-    if (weather.temp > plant.preferences.maxTemp && waterLevel < 0.4) {
+    if (weather.temp > plant.preferences.maxTemp && waterLevel < 0.2) {
       return true;
     }
     
     // Con pioggia recente, può aspettare
-    if (weather.precipitation > 2 && waterLevel > 0.3) {
+    if (weather.precipitation > 2 && waterLevel > 0.15) {
       return false;
     }
   }
   
-  return waterLevel < 0.3;
+  return waterLevel < 0.1;
 }
 
 export function getDaysAlive(plant: Plant): number {
   // Verifica che createdAt esista, altrimenti usa lastWatered come fallback
   const startDate = plant.createdAt || plant.lastWatered;
-  return Math.floor(
-    (Date.now() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)
-  );
+  
+  // Calcola giorni basandosi solo sulla data (ignorando ore/minuti)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const start = new Date(startDate);
+  start.setHours(0, 0, 0, 0);
+  
+  return Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 export function getAverageHealth(plant: Plant): number {

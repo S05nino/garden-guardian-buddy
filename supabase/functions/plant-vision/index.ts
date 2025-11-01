@@ -35,7 +35,7 @@ Non aggiungere altro testo, solo JSON.`
 - scientificName: nome botanico
 - category: tipo (herbs/succulents/flowers/vegetables/indoor/aquatic/ornamental)
 - description: breve descrizione delle cure
-- position: "sun", "partial_sun", o "shade"
+- position: descrizione italiana della posizione ideale (es: "Balcone soleggiato", "Interno luminoso", "Vicino a una finestra luminosa", "Balcone ombreggiato", "Davanzale assolato", "Terrazzo soleggiato")
 - wateringDays: numero tra 1-14
 - preferences: {minTemp, maxTemp, minHumidity, maxHumidity}
 - initialHealth: numero 80-100

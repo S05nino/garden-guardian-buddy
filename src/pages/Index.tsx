@@ -655,7 +655,7 @@ const Index = () => {
                         <h4 className="font-semibold">🤖 AI Plant Doctor</h4>
                         <p className="text-sm text-muted-foreground">
                           Analizza le foto per riconoscere specie, preferenze ambientali e salute generale.  
-                          Puoi scegliere tra <strong>Identify</strong> (aggiungi) e <strong>Diagnose</strong> (aggiorna salute).
+                          Puoi scegliere tra <strong>Identifica</strong> (aggiungi) e <strong>Diagnostica</strong> (valuta la salute).
                         </p>
                       </section>
 

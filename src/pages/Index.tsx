@@ -365,7 +365,7 @@ const Index = () => {
                 <>
                   <h2 className="text-2xl font-bold mb-2">Nessuna pianta aggiunta</h2>
                   <p className="text-muted-foreground mb-6 max-w-md">
-                    Inizia il tuo giardino aggiungendo la tua prima pianta. Ti aiuteremo a
+                    Crea il tuo giardino aggiungendo la tua prima pianta. Ti aiuteremo a
                     prendertene cura!
                   </p>
                   <Button
@@ -575,7 +575,7 @@ const Index = () => {
                               {user.id}
                             </code>
                             <p className="text-xs text-muted-foreground">
-                              Condividi questo ID con i tuoi amici per aggiungerti!
+                              Condividi questo ID con i tuoi amici per farti aggiungere!
                             </p>
                           </div>
 

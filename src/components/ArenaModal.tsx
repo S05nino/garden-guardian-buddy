@@ -724,7 +724,7 @@ export const ArenaModal = ({ open, onClose, plants, updatePlant, friendChallenge
                 </p>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  🤖 Allenamento vs Computer
+                  🤖 Sfida contro Computer
                 </p>
               )}
 

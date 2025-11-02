@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { WeatherWidget } from "@/components/WeatherWidget";
@@ -223,14 +223,18 @@ const Index = () => {
   }, []);
 
   // Notifiche piante da annaffiare
+  const hasWarnedRef = useRef(false);
   useEffect(() => {
     if (plants.length > 0 && weather) {
       const needWater = plants.filter((p) => shouldWater(p, weather));
-      if (needWater.length > 0) {
+
+      if (needWater.length > 0 && !hasWarnedRef.current) {
         const names = needWater.map((p) => p.name).join(", ");
         toast.warning("Piante da annaffiare!", {
           description: `${names} ${needWater.length === 1 ? "ha" : "hanno"} bisogno d'acqua`,
         });
+        
+        hasWarnedRef.current = true; // evita il doppio chiamata in Strict Mode
       }
     }
   }, [plants, weather]);

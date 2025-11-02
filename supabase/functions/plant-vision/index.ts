@@ -18,10 +18,10 @@ serve(async (req) => {
       throw new Error("Image is required");
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    console.log("🔑 LOVABLE_API_KEY presente:", !!LOVABLE_API_KEY);
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    console.log("🔑 GOOGLE_AI_API_KEY presente:", !!GOOGLE_AI_API_KEY);
+    if (!GOOGLE_AI_API_KEY) {
+      throw new Error("GOOGLE_AI_API_KEY not configured");
     }
 
     const systemPrompt = mode === "diagnose" 
@@ -44,26 +44,33 @@ Non aggiungere altro testo, solo JSON.`
 Se NON è una pianta, rispondi: {"error": "no_plant", "message": "Nessuna pianta rilevata"}
 Non aggiungere altro testo, solo JSON.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: mode === "diagnose" ? "Diagnostica questa pianta" : "Identifica questa pianta" },
-              { type: "image_url", image_url: { url: image } }
+    // Estrai solo i dati base64 dall'immagine se contiene il prefisso data:image
+    const imageData = image.includes('base64,') 
+      ? image.split('base64,')[1] 
+      : image;
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: systemPrompt + "\n\n" + (mode === "diagnose" ? "Diagnostica questa pianta" : "Identifica questa pianta") },
+              { 
+                inline_data: {
+                  mime_type: "image/jpeg",
+                  data: imageData
+                }
+              }
             ]
-          }
-        ],
-      }),
-    });
+          }]
+        }),
+      }
+    );
 
     if (!response.ok) {
       const error = await response.text();
@@ -72,7 +79,7 @@ Non aggiungere altro testo, solo JSON.`;
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!content) {
       throw new Error("No response from AI");

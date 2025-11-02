@@ -18,6 +18,7 @@ serve(async (req) => {
       throw new Error("Image is required");
     }
 
+    console.log("📍 Using Google AI Studio API");
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     console.log("🔑 GOOGLE_AI_API_KEY presente:", !!GOOGLE_AI_API_KEY);
     if (!GOOGLE_AI_API_KEY) {

@@ -16,6 +16,13 @@ export function calculateAdjustedWateringDays(plant: Plant, weather: Weather): n
     return adjustedDays;
   }
 
+  // Se la pianta è da interno, il meteo non impatta sull'irrigazione
+  const isIndoor = plant.position?.toLowerCase().includes("interno");
+  if (isIndoor) {
+    return adjustedDays;
+  }
+
+  // Solo per piante da esterno: applica modifiche meteo
   // Temperatura fuori range ottimale aumenta il consumo
   if (weather.temp > plant.preferences.maxTemp) {
     const tempExcess = weather.temp - plant.preferences.maxTemp;
@@ -145,8 +152,9 @@ export function shouldWater(plant: Plant, weather: Weather | null): boolean {
   // Urgenza base
   if (waterLevel < 0.1) return true;
   
-  // Considera meteo (solo se preferences esiste)
-  if (weather && plant.preferences) {
+  // Solo per piante da esterno: considera meteo
+  const isOutdoor = plant.position?.toLowerCase().includes("esterno");
+  if (weather && plant.preferences && isOutdoor) {
     // Con caldo eccessivo, anticipa l'annaffiatura
     if (weather.temp > plant.preferences.maxTemp && waterLevel < 0.2) {
       return true;

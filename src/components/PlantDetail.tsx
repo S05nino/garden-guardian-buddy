@@ -26,6 +26,8 @@ import {
 import { PlantStats } from "./PlantStats";
 import { ReminderSettings } from "./ReminderSettings";
 import { PlantWithOwner } from "@/hooks/usePlants";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PlantDetailProps {
   plant: PlantWithOwner;
@@ -44,6 +46,8 @@ export function PlantDetail({
   onClose,
   onOpenAIDiagnosis,
 }: PlantDetailProps) {
+  const { user } = useAuth();
+  
   // Stato locale per aggiornamenti immediati
   const [localPlant, setLocalPlant] = useState<PlantWithOwner>(plant);
 
@@ -103,6 +107,41 @@ const daysSinceWatered = useMemo(() => {
       onDelete(localPlant.id);
       onClose();
       toast.success(`${localPlant.name} rimossa dal giardino`);
+    }
+  };
+
+  const handleSendWateringReminder = async () => {
+    if (!user || !localPlant.ownerId) return;
+    
+    try {
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_id", user.id)
+        .single();
+      
+      const userName = profileData?.full_name || "Un amico";
+      
+      const { error } = await supabase
+        .from("notifications")
+        .insert({
+          user_id: localPlant.ownerId,
+          type: "watering_reminder",
+          title: "Promemoria annaffiatura",
+          body: `${userName} ti ricorda di annaffiare ${localPlant.name}`,
+          data: {
+            plantId: localPlant.id,
+            plantName: localPlant.name,
+            remindedBy: user.id,
+            remindedByName: userName
+          }
+        });
+      
+      if (error) throw error;
+      toast.success(`Promemoria inviato a ${localPlant.ownerName}!`);
+    } catch (err) {
+      console.error("Errore invio promemoria:", err);
+      toast.error("Errore nell'invio del promemoria");
     }
   };
 
@@ -343,14 +382,24 @@ const daysSinceWatered = useMemo(() => {
               {/* Actions */}
               {localPlant.isShared ? (
                 <Card className="p-4 bg-shared/20 border-shared">
-                  <div className="flex items-center gap-3 text-shared-foreground">
-                    <Users className="h-5 w-5" />
-                    <div>
-                      <p className="font-semibold text-sm">Pianta condivisa</p>
-                      <p className="text-sm opacity-80">
-                        Questa pianta è condivisa da {localPlant.ownerName}. Non puoi modificarla.
-                      </p>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 text-shared-foreground">
+                      <Users className="h-5 w-5" />
+                      <div>
+                        <p className="font-semibold text-sm">Pianta condivisa</p>
+                        <p className="text-sm opacity-80">
+                          Questa pianta è condivisa da {localPlant.ownerName}
+                        </p>
+                      </div>
                     </div>
+                    <Button
+                      onClick={handleSendWateringReminder}
+                      className="w-full bg-gradient-primary"
+                      size="lg"
+                    >
+                      <Droplets className="mr-2 h-5 w-5" />
+                      Ricorda a {localPlant.ownerName} di annaffiare
+                    </Button>
                   </div>
                 </Card>
               ) : (

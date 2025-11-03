@@ -458,12 +458,12 @@ export const ArenaModal = ({ open, onClose, plants, updatePlant, friendChallenge
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <Card className="max-w-4xl w-full max-h-[90vh] overflow-y-auto bg-card shadow-2xl rounded-2xl">
-        <CardContent className="p-6">
+      <Card className="max-w-4xl w-full max-h-[90vh] bg-card shadow-2xl rounded-2xl flex flex-col">
+        <CardContent className="p-6 flex flex-col flex-1 overflow-hidden">
 
-          {/* 🔹 Pulsanti Supabase: Storico / Classifica */}
+          {/* 🔹 Pulsanti Supabase: Storico / Classifica (Header fisso) */}
           {!battleStarted && !preparingBattle && viewMode === "select" && (
-            <div className="flex justify-end gap-2 mb-3">
+            <div className="flex justify-end gap-2 mb-3 flex-shrink-0">
               <Button variant="outline" onClick={loadHistory}>
                 📜 Storico
               </Button>
@@ -601,8 +601,9 @@ export const ArenaModal = ({ open, onClose, plants, updatePlant, friendChallenge
               <p className="text-muted-foreground text-sm">
                 Scegli una delle tue piante per combattere:
               </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[50vh] overflow-y-auto pr-2">
                 {[...plants]
+                  .filter(p => !p.isShared) // 🔹 Mostra solo piante proprie
                   .sort((a, b) => {
                     const aVictories = a.victories || 0;
                     const bVictories = b.victories || 0;
@@ -658,7 +659,7 @@ export const ArenaModal = ({ open, onClose, plants, updatePlant, friendChallenge
                     );
                   })}
               </div>
-              <Button variant="outline" className="mt-4" onClick={onClose}>
+              <Button variant="outline" className="mt-4 flex-shrink-0" onClick={onClose}>
                 Chiudi
               </Button>
             </div>

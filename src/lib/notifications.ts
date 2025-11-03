@@ -146,7 +146,19 @@ export async function scheduleWateringReminder(plantName: string, hoursUntilWate
 export async function cancelWateringReminder(plantName: string) {
   try {
     if (Capacitor.isNativePlatform()) {
-      const notificationId = activeReminders.get(plantName);
+      // Prova prima dalla memoria
+      let notificationId = activeReminders.get(plantName);
+      
+      // Se non è in memoria, recupera da Preferences
+      if (!notificationId) {
+        const stored = await Preferences.get({ key: `reminder_${plantName}` });
+        if (stored.value) {
+          const data = JSON.parse(stored.value);
+          notificationId = data.notificationId;
+        }
+      }
+      
+      // Cancella la notifica se trovata
       if (notificationId) {
         await LocalNotifications.cancel({ notifications: [{ id: notificationId }] });
         activeReminders.delete(plantName);
@@ -282,7 +294,10 @@ async function scheduleWateringReminderWithBody(
       ],
     });
 
-    // Memorizza reminder
+    // Aggiungi alla mappa in memoria
+    activeReminders.set(plantName, notificationId);
+
+    // Memorizza reminder in persistenza
     await Preferences.set({
       key: `reminder_${plantName}`,
       value: JSON.stringify({

@@ -202,10 +202,10 @@ const daysSinceWatered = useMemo(() => {
               <Users className="h-4 w-4 text-shared-foreground" />
               <span className="text-sm font-medium text-shared-foreground">
                 {localPlant.isShared 
-                  ? `Condiviso da ${localPlant.ownerName}` 
+                  ? `Pianta condivisa da ${localPlant.ownerName}` 
                   : localPlant.sharedWithNames && localPlant.sharedWithNames.length > 0
-                    ? `Condiviso con ${localPlant.sharedWithNames.join(", ")}`
-                    : "Condiviso con i tuoi amici"}
+                    ? `Pianta condivisa con ${localPlant.sharedWithNames.join(", ")}`
+                    : "Pianta condivisa con i tuoi amici"}
               </span>
             </div>
           )}
@@ -383,15 +383,6 @@ const daysSinceWatered = useMemo(() => {
               {localPlant.isShared ? (
                 <Card className="p-4 bg-shared/20 border-shared">
                   <div className="space-y-3">
-                    <div className="flex items-center gap-3 text-shared-foreground">
-                      <Users className="h-5 w-5" />
-                      <div>
-                        <p className="font-semibold text-sm">Pianta condivisa</p>
-                        <p className="text-sm opacity-80">
-                          Questa pianta è condivisa da {localPlant.ownerName}
-                        </p>
-                      </div>
-                    </div>
                     <Button
                       onClick={handleSendWateringReminder}
                       className="w-full bg-gradient-primary"

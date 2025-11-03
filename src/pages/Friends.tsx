@@ -113,7 +113,10 @@ function FriendDetail({ friendId, onClose, onChallenge, isShared, onToggleShare 
           ) : (
             <>
               <Share2 className="h-4 w-4 mr-2" />
-              Condividi
+              <span className="flex flex-col leading-tight text-left text-xs font-medium">
+                <span>Condividi</span>
+                <span>Giardino</span>
+              </span>
             </>
           )}
         </Button>

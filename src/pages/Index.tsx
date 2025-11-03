@@ -498,7 +498,7 @@ const Index = () => {
                 )}
                 {user ? "Profilo & Info — Garden Buddy" : "Informazioni & Guida — Garden Buddy"}
               </DialogTitle>
-              <div className="text-xs text-muted-foreground">v4.2</div>
+              <div className="text-xs text-muted-foreground">v4.3</div>
             </div>
           </DialogHeader>
 
@@ -680,6 +680,25 @@ const Index = () => {
                       </section>
 
                       <section>
+                        <h4 className="font-semibold">🌳 Condivisione Giardino</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Ora puoi <strong>condividere il tuo giardino</strong> con i tuoi amici!  
+                          Vai nella pagina <strong>Buddies</strong>, scegli un amico e premi <strong>Condividi Giardino</strong>.
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Il tuo amico potrà:
+                        </p>
+                        <ul className="list-disc list-inside text-sm text-muted-foreground">
+                          <li>👀 vedere le tue piante nella sua home</li>
+                          <li>📌 controllarne lo stato</li>
+                          <li>🔔 mandarti notifiche per ricordarti di annaffiarle</li>
+                        </ul>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Tu rimani sempre proprietario: loro possono solo guardare e aiutarti 💚
+                        </p>
+                      </section>
+
+                      <section>
                         <h4 className="font-semibold">⚔️ Arena</h4>
                         <p className="text-sm text-muted-foreground">
                           Fai combattere le tue piante in sfide divertenti 🌻.  
@@ -709,6 +728,11 @@ const Index = () => {
                         <li>
                           👥 <strong>Sistema Buddies</strong> —  
                           aggiungi amici tramite ID utente e visualizza le loro piante!
+                        </li>
+                        <li>
+                          🌳 <strong>Condivisione Giardino</strong> —  
+                          scegli un amico e condividi con lui il tuo giardino!
+                          Potrà vedere le tue piante nella sua home e aiutarti a prendertene cura.
                         </li>
                         <li>
                           ⚔️ <strong>Sfide tra amici</strong> —  

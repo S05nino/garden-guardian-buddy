@@ -91,7 +91,7 @@ export function updateHealthBasedOnWeather(plant: Plant, weather: Weather): Plan
   };
 }
 
-export function waterPlant(plant: Plant, weather: Weather | null): { plant: Plant; message: string } {
+export function waterPlant(plant: Plant, weather: Weather | null): { plant: Plant; message?: string } {
   const waterLevel = getWaterLevel(plant);
   const now = new Date().toISOString();
 
@@ -130,7 +130,6 @@ export function waterPlant(plant: Plant, weather: Weather | null): { plant: Plan
       wateringHistory: [...plant.wateringHistory, newHistory].slice(-30),
       totalWaterings: plant.totalWaterings + 1,
     },
-    message: `💧 Hai annaffiato ${plant.name}`,
   };
 }
 

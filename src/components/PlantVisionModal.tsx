@@ -39,7 +39,6 @@ export function PlantVisionModal({ open, onClose, mode: propMode, onAddPlant, pl
 
       if (image.dataUrl) {
         setImage(image.dataUrl);
-        toast.success("Foto scattata! 📸");
       }
     } catch (error: any) {
       console.error("Errore accesso fotocamera:", error);
@@ -75,8 +74,12 @@ export function PlantVisionModal({ open, onClose, mode: propMode, onAddPlant, pl
     }
   };
 
+  const hasNotifiedRef = useRef(false); // evita doppie notifiche in Strict Mode
+
   const analyzeImage = async () => {
     if (!image) return;
+
+    hasNotifiedRef.current = false; // reset all'inizio della nuova analisi
     setAnalyzing(true);
     setResult(null);
 
@@ -87,27 +90,37 @@ export function PlantVisionModal({ open, onClose, mode: propMode, onAddPlant, pl
 
       if (error) throw error;
 
-      // Se l'API ha restituito un errore strutturato (no_plant_detected)
       if (data?.error === "no_plant_detected") {
-        toast.error(data.message || "Nessuna pianta rilevata nell'immagine. Prova con un'altra foto.");
+        if (!hasNotifiedRef.current) {
+          toast.error(data.message || "Nessuna pianta rilevata nell'immagine. Prova con un'altra foto.");
+          hasNotifiedRef.current = true;
+        }
         setAnalyzing(false);
         return;
       }
 
       // Verifica confidenza minima per l'identificazione
       if (mode === "identify" && data.confidence < 0.3) {
-        toast.error("Non sono sicuro che questa sia una pianta. Prova con un'immagine più chiara.");
+        if (!hasNotifiedRef.current) {
+          toast.error("Non sono sicuro che questa sia una pianta. Prova con un'immagine più chiara.");
+          hasNotifiedRef.current = true;
+        }
         setAnalyzing(false);
         return;
       }
 
       setResult({ ...data, isPlant: true });
-      
+
       if (mode === "identify") {
-        toast.success(`${data.name} identificata con ${Math.round(data.confidence * 100)}% di confidenza`);
+        if (!hasNotifiedRef.current) {
+          toast.success(`${data.name} identificata con ${Math.round(data.confidence * 100)}% di confidenza`);
+          hasNotifiedRef.current = true;
+        }
       } else {
-        toast.success("Diagnosi completata");
-        
+        if (!hasNotifiedRef.current) {
+          hasNotifiedRef.current = true;
+        }
+
         if (plantToDiagnose && onUpdatePlantHealth && data.overallHealth) {
           const getRandomizedHealth = (baseHealth: number, range: number = 5) => {
             const min = Math.max(0, baseHealth - range);
@@ -127,17 +140,21 @@ export function PlantVisionModal({ open, onClose, mode: propMode, onAddPlant, pl
               ? Math.round(data.overallHealth)
               : healthMap[data.overallHealth as keyof typeof healthMap] || getRandomizedHealth(50, 10);
           onUpdatePlantHealth(plantToDiagnose.id, newHealth);
-          toast.success(
-            `Salute di ${plantToDiagnose.name} aggiornata a ${newHealth}%`,
-            {
+
+          if (!hasNotifiedRef.current) {
+            toast.success(`Salute di ${plantToDiagnose.name} aggiornata a ${newHealth}%`, {
               description: "Basata sull'analisi AI",
-            }
-          );
+            });
+            hasNotifiedRef.current = true;
+          }
         }
       }
     } catch (error) {
       console.error('Errore analisi:', error);
-      toast.error("Errore durante l'analisi. Riprova.");
+      if (!hasNotifiedRef.current) {
+        toast.error("Errore durante l'analisi. Riprova.");
+        hasNotifiedRef.current = true;
+      }
     } finally {
       setAnalyzing(false);
     }
@@ -160,26 +177,20 @@ export function PlantVisionModal({ open, onClose, mode: propMode, onAddPlant, pl
 
   const getCategoryIcon = (category: string): string => {
     switch (category) {
-      case "herbs":
-        return "🌿";
-      case "succulents":
-        return "🌵";
-      case "flowers":
-        return "🌸";
-      case "vegetables":
-        return "🥦";
-      case "indoor":
-        return "🪴";
-      case "aquatic":
-        return "🪷";
-      case "ornamental":
-        return "🌺";
-      default:
-        return "🌱";
+      case "herbs": return "🌿";
+      case "succulents": return "🌵";
+      case "flowers": return "🌸";
+      case "vegetables": return "🥦";
+      case "indoor": return "🪴";
+      case "aquatic": return "🪷";
+      case "ornamental": return "🌺";
+      default: return "🌱";
     }
   };
 
   const handleAddToGarden = () => {
+    hasNotifiedRef.current = false;
+
     if (result && onAddPlant) {
       const normalizedCategory = normalizeCategory(result.category);
 
@@ -198,9 +209,11 @@ export function PlantVisionModal({ open, onClose, mode: propMode, onAddPlant, pl
         health: result.initialHealth || 100,
       };
       onAddPlant(plantData);
-      toast.success(
-        `${result.name} aggiunta al giardino! 🌱 Salute iniziale: ${result.initialHealth || 100}%`
-      );
+      if (!hasNotifiedRef.current) {
+        toast.success(`${result.name} aggiunta al giardino! 🌱 Salute iniziale: ${result.initialHealth || 100}%`);
+        hasNotifiedRef.current = true;
+      }
+
       handleClose();
     }
   };

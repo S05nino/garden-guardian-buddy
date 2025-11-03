@@ -19,7 +19,7 @@ export function PlantCard({ plant, weather, onClick }: PlantCardProps) {
   return (
     <Card
       className={`group cursor-pointer overflow-hidden transition-all hover:shadow-glow hover:-translate-y-1 ${
-        plant.isShared || plant.isSharedByMe ? "border-shared bg-shared/50" : ""
+        plant.isShared || plant.isSharedByMe ? "border-shared" : ""
       }`}
       onClick={onClick}
     >

@@ -458,7 +458,7 @@ export const ArenaModal = ({ open, onClose, plants, updatePlant, friendChallenge
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <Card className="max-w-4xl w-full bg-card shadow-2xl rounded-2xl overflow-hidden">
+      <Card className="max-w-4xl w-full max-h-[90vh] overflow-y-auto bg-card shadow-2xl rounded-2xl">
         <CardContent className="p-6">
 
           {/* 🔹 Pulsanti Supabase: Storico / Classifica */}

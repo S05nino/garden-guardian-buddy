@@ -9,6 +9,7 @@ export interface PlantWithOwner extends Plant {
   isShared?: boolean;
   ownerName?: string;
   ownerId?: string;
+  isSharedByMe?: boolean; // Indica se questa pianta è condivisa con altri
 }
 
 export function usePlants(weather: Weather | null) {
@@ -53,6 +54,14 @@ export function usePlants(weather: Weather | null) {
       try {
         console.log("🔍 Caricamento piante per user_id:", userId);
         
+        // Carica le condivisioni che IO ho fatto (per marcare le mie piante come condivise)
+        const { data: myShares } = await supabase
+          .from("garden_shares")
+          .select("shared_with_id")
+          .eq("owner_id", userId);
+
+        const isAnyPlantSharedByMe = myShares && myShares.length > 0;
+
         // Carica piante proprie
         const { data: myPlants, error: myError } = await supabase
           .from("plants")
@@ -64,6 +73,7 @@ export function usePlants(weather: Weather | null) {
         const mappedMyPlants: PlantWithOwner[] = (myPlants || []).map(p => ({
           ...toPlant(p),
           isShared: false,
+          isSharedByMe: isAnyPlantSharedByMe,
         }));
 
         // Carica piante condivise da amici

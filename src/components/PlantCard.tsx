@@ -19,7 +19,7 @@ export function PlantCard({ plant, weather, onClick }: PlantCardProps) {
   return (
     <Card
       className={`group cursor-pointer overflow-hidden transition-all hover:shadow-glow hover:-translate-y-1 ${
-        plant.isShared ? "border-shared bg-shared/10" : ""
+        plant.isShared || plant.isSharedByMe ? "border-shared bg-shared/10" : ""
       }`}
       onClick={onClick}
     >
@@ -30,6 +30,14 @@ export function PlantCard({ plant, weather, onClick }: PlantCardProps) {
           >
             <Users className="mr-1 h-3 w-3" />
             {plant.ownerName}
+          </Badge>
+        )}
+        {plant.isSharedByMe && !plant.isShared && (
+          <Badge
+            className="absolute left-2 top-2 bg-shared text-shared-foreground"
+          >
+            <Users className="mr-1 h-3 w-3" />
+            Condiviso
           </Badge>
         )}
         {plant.imageUrl ? (

@@ -140,6 +140,12 @@ const daysSinceWatered = useMemo(() => {
                       {localPlant.ownerName}
                     </Badge>
                   )}
+                  {localPlant.isSharedByMe && !localPlant.isShared && (
+                    <Badge className="bg-shared text-shared-foreground">
+                      <Users className="mr-1 h-3 w-3" />
+                      Condiviso
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-muted-foreground mt-1">{localPlant.description}</p>
                 <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">

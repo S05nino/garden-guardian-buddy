@@ -174,7 +174,7 @@ export default function Friends() {
   const { friends, loading, addFriend, removeFriend } = useFriends();
   const { weather } = useWeather();
   const { plants, updatePlant } = usePlants(weather);
-  const { shares, isSharedWith, shareGardenWith, removeShare, refreshShares } = useGardenShares();
+  const { shares, receivedShares, isSharedWith, shareGardenWith, removeShare, refreshShares } = useGardenShares();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [friendId, setFriendId] = useState("");
   const [selectedFriend, setSelectedFriend] = useState<string | null>(null);
@@ -306,7 +306,9 @@ export default function Friends() {
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {friends.map((friend) => (
+              {friends.map((friend) => {
+                const hasSharedGarden = receivedShares.some(s => s.owner_id === friend.user_id);
+                return (
                 <Card
                   key={friend.user_id}
                   className="cursor-pointer hover:border-primary transition"
@@ -314,7 +316,7 @@ export default function Friends() {
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="flex items-center justify-center bg-primary text-white font-semibold rounded-full h-10 w-10">
+                      <div className={`flex items-center justify-center ${hasSharedGarden ? "bg-shared text-shared-foreground" : "bg-primary text-white"} font-semibold rounded-full h-10 w-10`}>
                         {friend.full_name?.[0]?.toUpperCase() || "?"}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -340,7 +342,8 @@ export default function Friends() {
                     </Button>
                   </CardContent>
                 </Card>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

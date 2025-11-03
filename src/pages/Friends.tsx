@@ -108,7 +108,10 @@ function FriendDetail({ friendId, onClose, onChallenge, isShared, onToggleShare 
           {isShared ? (
             <>
               <X className="h-4 w-4 mr-2" />
-              Rimuovi
+              <span className="flex flex-col leading-tight text-left text-xs font-medium">
+                <span>Rimuovi</span>
+                <span>Accesso</span>
+              </span>
             </>
           ) : (
             <>

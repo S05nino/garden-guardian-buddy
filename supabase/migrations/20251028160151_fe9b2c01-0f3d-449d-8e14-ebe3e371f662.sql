@@ -89,9 +89,9 @@ BEGIN
 
   -- Determina il risultato per il difensore
   IF NEW.winner_id = NEW.defender_id THEN
-    result_text := 'Hai vinto!';
+    result_text := 'Hai vinto! 🥳🤩';
   ELSE
-    result_text := 'Hai perso!';
+    result_text := 'Hai perso! ☹️😭';
   END IF;
 
   -- Crea notifica per il difensore (chi ha ricevuto la sfida)

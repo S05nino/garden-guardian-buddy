@@ -129,8 +129,21 @@ export function usePlants(weather: Weather | null) {
 
   // ❌ Rimuovi
   const removePlant = async (id: string) => {
+    if (!userId) {
+      console.error("❌ Impossibile eliminare pianta: utente non loggato");
+      return;
+    }
+
+    console.log("🗑️ Eliminazione pianta da Supabase:", id);
+    const { error } = await supabase.from("plants").delete().eq("id", id);
+    
+    if (error) {
+      console.error("❌ Errore eliminazione pianta da Supabase:", error);
+      return;
+    }
+    
+    console.log("✅ Pianta eliminata da Supabase, rimuovo dallo state locale");
     setPlants((prev) => prev.filter((p) => p.id !== id));
-    if (userId) await supabase.from("plants").delete().eq("id", id);
   };
 
   // ⚔️ Battaglie

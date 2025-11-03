@@ -43,10 +43,10 @@ export function updateHealthBasedOnWeather(plant: Plant, weather: Weather): Plan
   let health = plant.health;
   const waterLevel = getWaterLevel(plant);
 
-  // Penalità acqua proporzionale (non istantanea)
-  if (waterLevel < 0.1) health -= 10 * (1 - waterLevel);    // acqua critica
-  else if (waterLevel < 0.3) health -= 5 * (0.3 - waterLevel); // acqua bassa
-  else if (waterLevel > 0.95) health -= 5 * (waterLevel - 0.95); // troppa acqua
+  // Penalità salute SOLO quando l'acqua è a zero
+  if (waterLevel === 0) {
+    health -= 15; // Penalità significativa quando non c'è acqua
+  }
 
   // Bonus pioggia naturale per piante esterne
   if (weather.precipitation > 5 && plant.position?.toLowerCase().includes("esterno")) {

@@ -114,29 +114,14 @@ const daysSinceWatered = useMemo(() => {
     if (!user || !localPlant.ownerId) return;
     
     try {
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("user_id", user.id)
-        .single();
-      
-      const userName = profileData?.full_name || "Un amico";
-      
-      const { error } = await supabase
-        .from("notifications")
-        .insert({
-          user_id: localPlant.ownerId,
-          type: "watering_reminder",
-          title: "Promemoria annaffiatura",
-          body: `${userName} ti ricorda di annaffiare ${localPlant.name}`,
-          data: {
-            plantId: localPlant.id,
-            plantName: localPlant.name,
-            remindedBy: user.id,
-            remindedByName: userName
-          }
-        });
-      
+      const { data, error } = await supabase.functions.invoke('send-watering-reminder', {
+        body: {
+          plantId: localPlant.id,
+          plantName: localPlant.name,
+          ownerId: localPlant.ownerId
+        }
+      });
+
       if (error) throw error;
       toast.success(`Promemoria inviato a ${localPlant.ownerName}!`);
     } catch (err) {

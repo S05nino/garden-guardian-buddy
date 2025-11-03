@@ -2,11 +2,12 @@ import { Plant, Weather } from "@/types/plant";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getWaterLevel, getHealthColor, shouldWater } from "@/lib/plantLogic";
-import { Droplets, Heart } from "lucide-react";
+import { Droplets, Heart, Users } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { PlantWithOwner } from "@/hooks/usePlants";
 
 interface PlantCardProps {
-  plant: Plant;
+  plant: PlantWithOwner;
   weather: Weather | null;
   onClick: () => void;
 }
@@ -17,10 +18,20 @@ export function PlantCard({ plant, weather, onClick }: PlantCardProps) {
 
   return (
     <Card
-      className="group cursor-pointer overflow-hidden transition-all hover:shadow-glow hover:-translate-y-1"
+      className={`group cursor-pointer overflow-hidden transition-all hover:shadow-glow hover:-translate-y-1 ${
+        plant.isShared ? "border-shared bg-shared/10" : ""
+      }`}
       onClick={onClick}
     >
       <div className="relative aspect-video overflow-hidden bg-muted">
+        {plant.isShared && (
+          <Badge
+            className="absolute left-2 top-2 bg-shared text-shared-foreground"
+          >
+            <Users className="mr-1 h-3 w-3" />
+            {plant.ownerName}
+          </Badge>
+        )}
         {plant.imageUrl ? (
           <img
             src={plant.imageUrl}

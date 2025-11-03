@@ -5,8 +5,14 @@ import { Plant, Weather } from "@/types/plant";
 import { updateHealthBasedOnWeather } from "@/lib/plantLogic";
 import type { Json } from "@/integrations/supabase/types";
 
+export interface PlantWithOwner extends Plant {
+  isShared?: boolean;
+  ownerName?: string;
+  ownerId?: string;
+}
+
 export function usePlants(weather: Weather | null) {
-  const [plants, setPlants] = useState<Plant[]>([]);
+  const [plants, setPlants] = useState<PlantWithOwner[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -46,21 +52,57 @@ export function usePlants(weather: Weather | null) {
 
       try {
         console.log("🔍 Caricamento piante per user_id:", userId);
-        const { data, error } = await supabase
+        
+        // Carica piante proprie
+        const { data: myPlants, error: myError } = await supabase
           .from("plants")
           .select("*")
           .eq("user_id", userId);
 
-        if (error) throw error;
+        if (myError) throw myError;
 
-        if (data && data.length > 0) {
-          console.log("✅ Caricate", data.length, "piante per l'utente");
-          const mapped = data.map(toPlant);
-          setPlants(mapped);
-        } else {
-          console.log("ℹ️ Nessuna pianta trovata su Supabase per questo utente");
-          setPlants([]);
+        const mappedMyPlants: PlantWithOwner[] = (myPlants || []).map(p => ({
+          ...toPlant(p),
+          isShared: false,
+        }));
+
+        // Carica piante condivise da amici
+        const { data: sharedGardens } = await supabase
+          .from("garden_shares")
+          .select("owner_id")
+          .eq("shared_with_id", userId);
+
+        let sharedPlants: PlantWithOwner[] = [];
+        
+        if (sharedGardens && sharedGardens.length > 0) {
+          const ownerIds = sharedGardens.map(sg => sg.owner_id);
+          
+          // Carica piante condivise
+          const { data: sharedPlantsData } = await supabase
+            .from("plants")
+            .select("*")
+            .in("user_id", ownerIds);
+
+          // Carica nomi proprietari
+          const { data: ownerProfiles } = await supabase
+            .from("profiles")
+            .select("user_id, full_name")
+            .in("user_id", ownerIds);
+
+          sharedPlants = (sharedPlantsData || []).map(p => {
+            const ownerProfile = ownerProfiles?.find(prof => prof.user_id === p.user_id);
+            return {
+              ...toPlant(p),
+              isShared: true,
+              ownerId: p.user_id,
+              ownerName: ownerProfile?.full_name || "Amico",
+            };
+          });
         }
+
+        const allPlants = [...mappedMyPlants, ...sharedPlants];
+        console.log("✅ Caricate", allPlants.length, "piante (", mappedMyPlants.length, "proprie,", sharedPlants.length, "condivise)");
+        setPlants(allPlants);
       } catch (err) {
         console.error("Errore caricamento piante:", err);
         setPlants([]);
@@ -77,7 +119,9 @@ export function usePlants(weather: Weather | null) {
     if (!loaded || !userId || plants.length === 0) return;
     
     const sync = async () => {
-      for (const plant of plants) {
+      // Sincronizza solo le piante proprie, non quelle condivise
+      const myPlants = plants.filter(p => !p.isShared);
+      for (const plant of myPlants) {
         const record = toDbPlant(plant, userId);
         const { error } = await supabase
           .from("plants")

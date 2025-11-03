@@ -8,8 +8,9 @@ import { useFriends } from "@/hooks/useFriends";
 import { useAuth } from "@/hooks/useAuth";
 import { usePlants } from "@/hooks/usePlants";
 import { useWeather } from "@/hooks/useWeather";
+import { useGardenShares } from "@/hooks/useGardenShares";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, UserPlus, Users, Leaf, Swords } from "lucide-react";
+import { ArrowLeft, UserPlus, Users, Leaf, Swords, Share2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Plant } from "@/types/plant";
 import { ArenaModal } from "@/components/ArenaModal";
@@ -18,9 +19,11 @@ interface FriendDetailProps {
   friendId: string;
   onClose: () => void;
   onChallenge: (friendId: string, plants: Plant[]) => void;
+  isShared: boolean;
+  onToggleShare: () => void;
 }
 
-function FriendDetail({ friendId, onClose, onChallenge }: FriendDetailProps) {
+function FriendDetail({ friendId, onClose, onChallenge, isShared, onToggleShare }: FriendDetailProps) {
   const [profile, setProfile] = useState<any>(null);
   const [plants, setPlants] = useState<Plant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,16 +87,36 @@ function FriendDetail({ friendId, onClose, onChallenge }: FriendDetailProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3 pb-4 border-b">
-        <div className="flex items-center justify-center bg-primary text-white font-semibold rounded-full h-12 w-12">
-          {profile?.full_name?.[0]?.toUpperCase() || "?"}
+      <div className="flex items-center justify-between gap-3 pb-4 border-b">
+        <div className="flex items-center gap-3">
+          <div className={`flex items-center justify-center ${isShared ? "bg-shared text-shared-foreground" : "bg-primary text-white"} font-semibold rounded-full h-12 w-12`}>
+            {profile?.full_name?.[0]?.toUpperCase() || "?"}
+          </div>
+          <div>
+            <h3 className="font-semibold text-lg">{profile?.full_name || "Utente"}</h3>
+            <p className="text-sm text-muted-foreground">
+              {plants.length} {plants.length === 1 ? "pianta" : "piante"}
+            </p>
+          </div>
         </div>
-        <div>
-          <h3 className="font-semibold text-lg">{profile?.full_name || "Utente"}</h3>
-          <p className="text-sm text-muted-foreground">
-            {plants.length} {plants.length === 1 ? "pianta" : "piante"}
-          </p>
-        </div>
+        <Button
+          onClick={onToggleShare}
+          size="sm"
+          variant={isShared ? "destructive" : "default"}
+          className={!isShared ? "bg-shared hover:bg-shared/80 text-shared-foreground" : ""}
+        >
+          {isShared ? (
+            <>
+              <X className="h-4 w-4 mr-2" />
+              Rimuovi
+            </>
+          ) : (
+            <>
+              <Share2 className="h-4 w-4 mr-2" />
+              Condividi
+            </>
+          )}
+        </Button>
       </div>
 
       {plants.length > 0 && (
@@ -151,6 +174,7 @@ export default function Friends() {
   const { friends, loading, addFriend, removeFriend } = useFriends();
   const { weather } = useWeather();
   const { plants, updatePlant } = usePlants(weather);
+  const { shares, isSharedWith, shareGardenWith, removeShare, refreshShares } = useGardenShares();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [friendId, setFriendId] = useState("");
   const [selectedFriend, setSelectedFriend] = useState<string | null>(null);
@@ -198,6 +222,18 @@ export default function Friends() {
       friendName: profileData?.full_name || "Amico",
       friendPlants,
     });
+  };
+
+  const handleToggleShare = async (friendUserId: string) => {
+    const alreadyShared = isSharedWith(friendUserId);
+    
+    if (alreadyShared) {
+      await removeShare(friendUserId);
+    } else {
+      await shareGardenWith(friendUserId);
+    }
+    
+    await refreshShares();
   };
 
   if (!user) {
@@ -364,6 +400,8 @@ export default function Friends() {
               friendId={selectedFriend}
               onClose={() => setSelectedFriend(null)}
               onChallenge={handleChallenge}
+              isShared={isSharedWith(selectedFriend)}
+              onToggleShare={() => handleToggleShare(selectedFriend)}
             />
           )}
         </DialogContent>

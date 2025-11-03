@@ -12,7 +12,7 @@ import {
   calculateAdjustedWateringDays,
 } from "@/lib/plantLogic";
 import { scheduleWateringReminder } from "@/lib/notifications";
-import { Droplets, Heart, MapPin, Calendar, Trash2, X, BarChart3, Bell, Sparkles } from "lucide-react";
+import { Droplets, Heart, MapPin, Calendar, Trash2, X, BarChart3, Bell, Sparkles, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useMemo, useState, useEffect } from "react";
 import {
@@ -25,9 +25,10 @@ import {
 } from "recharts";
 import { PlantStats } from "./PlantStats";
 import { ReminderSettings } from "./ReminderSettings";
+import { PlantWithOwner } from "@/hooks/usePlants";
 
 interface PlantDetailProps {
-  plant: Plant;
+  plant: PlantWithOwner;
   weather: Weather | null;
   onUpdate: (plantId: string, updates: Partial<Plant>) => void;
   onDelete: (plantId: string) => void;
@@ -44,7 +45,7 @@ export function PlantDetail({
   onOpenAIDiagnosis,
 }: PlantDetailProps) {
   // Stato locale per aggiornamenti immediati
-  const [localPlant, setLocalPlant] = useState<Plant>(plant);
+  const [localPlant, setLocalPlant] = useState<PlantWithOwner>(plant);
 
   // Sincronizza lo stato locale quando la prop plant cambia
   useEffect(() => {
@@ -133,6 +134,12 @@ const daysSinceWatered = useMemo(() => {
                 <div className="flex items-center gap-2 mb-2">
                   <h2 className="text-3xl font-bold">{localPlant.name}</h2>
                   <Badge variant="secondary">{localPlant.category}</Badge>
+                  {localPlant.isShared && (
+                    <Badge className="bg-shared text-shared-foreground">
+                      <Users className="mr-1 h-3 w-3" />
+                      {localPlant.ownerName}
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-muted-foreground mt-1">{localPlant.description}</p>
                 <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
@@ -324,19 +331,33 @@ const daysSinceWatered = useMemo(() => {
               )}
 
               {/* Actions */}
-              <div className="flex gap-3">
-                <Button
-                  onClick={handleWater}
-                  className="flex-1 bg-gradient-primary"
-                  size="lg"
-                >
-                  <Droplets className="mr-2 h-5 w-5" />
-                  Annaffia Ora
-                </Button>
-                <Button variant="destructive" size="lg" onClick={handleDelete}>
-                  <Trash2 className="h-5 w-5" />
-                </Button>
-              </div>
+              {localPlant.isShared ? (
+                <Card className="p-4 bg-shared/20 border-shared">
+                  <div className="flex items-center gap-3 text-shared-foreground">
+                    <Users className="h-5 w-5" />
+                    <div>
+                      <p className="font-semibold text-sm">Pianta condivisa</p>
+                      <p className="text-sm opacity-80">
+                        Questa pianta è condivisa da {localPlant.ownerName}. Non puoi modificarla.
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              ) : (
+                <div className="flex gap-3">
+                  <Button
+                    onClick={handleWater}
+                    className="flex-1 bg-gradient-primary"
+                    size="lg"
+                  >
+                    <Droplets className="mr-2 h-5 w-5" />
+                    Annaffia Ora
+                  </Button>
+                  <Button variant="destructive" size="lg" onClick={handleDelete}>
+                    <Trash2 className="h-5 w-5" />
+                  </Button>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="stats" className="mt-6">
@@ -344,7 +365,19 @@ const daysSinceWatered = useMemo(() => {
             </TabsContent>
 
             <TabsContent value="reminders" className="mt-6">
-              <ReminderSettings plant={localPlant} weather={weather} onUpdate={handleLocalUpdate} />
+              {localPlant.isShared ? (
+                <Card className="p-6 bg-shared/20 border-shared text-center">
+                  <Users className="h-12 w-12 mx-auto mb-3 text-shared-foreground" />
+                  <p className="text-shared-foreground font-semibold">
+                    Promemoria non disponibili per piante condivise
+                  </p>
+                  <p className="text-sm text-shared-foreground/70 mt-2">
+                    Solo {localPlant.ownerName} può gestire i promemoria per questa pianta
+                  </p>
+                </Card>
+              ) : (
+                <ReminderSettings plant={localPlant} weather={weather} onUpdate={handleLocalUpdate} />
+              )}
             </TabsContent>
           </Tabs>
         </div>

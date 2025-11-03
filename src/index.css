@@ -36,6 +36,9 @@ All colors MUST be HSL.
     --warning: 35 90% 55%;
     --warning-foreground: 0 0% 100%;
 
+    --shared: 45 70% 80%;
+    --shared-foreground: 45 60% 25%;
+
     --border: 120 20% 88%;
     --input: 120 20% 88%;
     --ring: 142 70% 45%;
@@ -80,6 +83,9 @@ All colors MUST be HSL.
 
     --warning: 35 90% 55%;
     --warning-foreground: 0 0% 100%;
+
+    --shared: 45 70% 65%;
+    --shared-foreground: 0 0% 100%;
 
     --border: 140 20% 20%;
     --input: 140 20% 20%;

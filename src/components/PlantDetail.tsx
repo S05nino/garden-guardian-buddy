@@ -115,7 +115,9 @@ const daysSinceWatered = useMemo(() => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-      <Card className="relative max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <Card className={`relative max-w-4xl w-full max-h-[90vh] overflow-y-auto ${
+        localPlant.isShared || localPlant.isSharedByMe ? "border-shared bg-shared/30" : ""
+      }`}>
         <Button
           variant="ghost"
           size="icon"

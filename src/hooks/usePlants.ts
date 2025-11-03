@@ -10,6 +10,7 @@ export interface PlantWithOwner extends Plant {
   ownerName?: string;
   ownerId?: string;
   isSharedByMe?: boolean; // Indica se questa pianta è condivisa con altri
+  sharedWithNames?: string[]; // Nomi degli amici con cui ho condiviso
 }
 
 export function usePlants(weather: Weather | null) {
@@ -61,6 +62,18 @@ export function usePlants(weather: Weather | null) {
           .eq("owner_id", userId);
 
         const isAnyPlantSharedByMe = myShares && myShares.length > 0;
+        
+        // Carica i nomi degli amici con cui ho condiviso
+        let sharedWithNames: string[] = [];
+        if (myShares && myShares.length > 0) {
+          const sharedWithIds = myShares.map(s => s.shared_with_id);
+          const { data: friendProfiles } = await supabase
+            .from("profiles")
+            .select("user_id, full_name")
+            .in("user_id", sharedWithIds);
+          
+          sharedWithNames = (friendProfiles || []).map(p => p.full_name || "Amico");
+        }
 
         // Carica piante proprie
         const { data: myPlants, error: myError } = await supabase
@@ -74,6 +87,7 @@ export function usePlants(weather: Weather | null) {
           ...toPlant(p),
           isShared: false,
           isSharedByMe: isAnyPlantSharedByMe,
+          sharedWithNames: isAnyPlantSharedByMe ? sharedWithNames : undefined,
         }));
 
         // Carica piante condivise da amici

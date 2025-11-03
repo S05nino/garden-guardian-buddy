@@ -164,7 +164,9 @@ const daysSinceWatered = useMemo(() => {
               <span className="text-sm font-medium text-shared-foreground">
                 {localPlant.isShared 
                   ? `Condiviso da ${localPlant.ownerName}` 
-                  : "Condiviso con i tuoi amici"}
+                  : localPlant.sharedWithNames && localPlant.sharedWithNames.length > 0
+                    ? `Condiviso con ${localPlant.sharedWithNames.join(", ")}`
+                    : "Condiviso con i tuoi amici"}
               </span>
             </div>
           )}

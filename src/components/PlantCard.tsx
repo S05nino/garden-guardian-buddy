@@ -24,22 +24,6 @@ export function PlantCard({ plant, weather, onClick }: PlantCardProps) {
       onClick={onClick}
     >
       <div className="relative aspect-video overflow-hidden bg-muted">
-        {plant.isShared && (
-          <Badge
-            className="absolute left-2 top-2 bg-shared text-shared-foreground"
-          >
-            <Users className="mr-1 h-3 w-3" />
-            {plant.ownerName}
-          </Badge>
-        )}
-        {plant.isSharedByMe && !plant.isShared && (
-          <Badge
-            className="absolute left-2 top-2 bg-shared text-shared-foreground"
-          >
-            <Users className="mr-1 h-3 w-3" />
-            Condiviso
-          </Badge>
-        )}
         {plant.imageUrl ? (
           <img
             src={plant.imageUrl}

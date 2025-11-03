@@ -89,7 +89,7 @@ function FriendDetail({ friendId, onClose, onChallenge, isShared, onToggleShare 
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 pb-4 border-b">
         <div className="flex items-center gap-3">
-          <div className={`flex items-center justify-center ${isShared ? "bg-shared text-shared-foreground" : "bg-primary text-white"} font-semibold rounded-full h-12 w-12`}>
+          <div className="flex items-center justify-center bg-primary text-white font-semibold rounded-full h-12 w-12">
             {profile?.full_name?.[0]?.toUpperCase() || "?"}
           </div>
           <div>
@@ -316,8 +316,8 @@ export default function Friends() {
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className={`flex items-center justify-center ${hasSharedGarden ? "bg-shared text-shared-foreground" : "bg-primary text-white"} font-semibold rounded-full h-10 w-10`}>
-                        {friend.full_name?.[0]?.toUpperCase() || "?"}
+          <div className="flex items-center justify-center bg-primary text-white font-semibold rounded-full h-10 w-10">
+            {friend.full_name?.[0]?.toUpperCase() || "?"}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">

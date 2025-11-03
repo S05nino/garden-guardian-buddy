@@ -136,18 +136,6 @@ const daysSinceWatered = useMemo(() => {
                 <div className="flex items-center gap-2 mb-2">
                   <h2 className="text-3xl font-bold">{localPlant.name}</h2>
                   <Badge variant="secondary">{localPlant.category}</Badge>
-                  {localPlant.isShared && (
-                    <Badge className="bg-shared text-shared-foreground">
-                      <Users className="mr-1 h-3 w-3" />
-                      {localPlant.ownerName}
-                    </Badge>
-                  )}
-                  {localPlant.isSharedByMe && !localPlant.isShared && (
-                    <Badge className="bg-shared text-shared-foreground">
-                      <Users className="mr-1 h-3 w-3" />
-                      Condiviso
-                    </Badge>
-                  )}
                 </div>
                 <p className="text-muted-foreground mt-1">{localPlant.description}</p>
                 <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
@@ -166,6 +154,18 @@ const daysSinceWatered = useMemo(() => {
                 alt={localPlant.name}
                 className="h-full w-full object-cover"
               />
+            </div>
+          )}
+
+          {/* Shared Info */}
+          {(localPlant.isShared || localPlant.isSharedByMe) && (
+            <div className="flex items-center justify-center gap-2 py-3 px-4 bg-shared/20 border border-shared rounded-lg">
+              <Users className="h-4 w-4 text-shared-foreground" />
+              <span className="text-sm font-medium text-shared-foreground">
+                {localPlant.isShared 
+                  ? `Condiviso da ${localPlant.ownerName}` 
+                  : "Condiviso con i tuoi amici"}
+              </span>
             </div>
           )}
 

@@ -498,7 +498,7 @@ const Index = () => {
                 )}
                 {user ? "Profilo & Info — Garden Buddy" : "Informazioni & Guida — Garden Buddy"}
               </DialogTitle>
-              <div className="text-xs text-muted-foreground">v4.3</div>
+              <div className="text-xs text-muted-foreground">v4.3.1</div>
             </div>
           </DialogHeader>
 

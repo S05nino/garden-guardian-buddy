@@ -8,7 +8,7 @@ import { Clock, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   calculateAdjustedWateringDays,
-  getWaterLevel,
+  getWaterLevelWithWeather,
 } from '@/lib/plantLogic';
 import {
   checkNotificationPermission,
@@ -65,7 +65,7 @@ export function ReminderSettings({ plant, weather, onUpdate }: ReminderSettingsP
       setNotificationsEnabled(true);
       onUpdate(plant.id, { remindersEnabled: true });
 
-      const waterLevel = getWaterLevel(plant);
+      const waterLevel = getWaterLevelWithWeather(plant, weather);
       const adjustedDays = weather
         ? calculateAdjustedWateringDays(plant, weather)
         : plant.wateringDays;
@@ -93,7 +93,7 @@ export function ReminderSettings({ plant, weather, onUpdate }: ReminderSettingsP
     toast.info('Promemoria disattivato');
   };
 
-  const waterLevel = getWaterLevel(plant);
+  const waterLevel = getWaterLevelWithWeather(plant, weather);
   const adjustedDays = weather
     ? calculateAdjustedWateringDays(plant, weather)
     : plant.wateringDays;

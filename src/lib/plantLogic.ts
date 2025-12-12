@@ -1,11 +1,23 @@
 import { Plant, Weather, WateringHistory } from "@/types/plant";
 
+// Calcola livello acqua considerando i giorni base della pianta
 export function getWaterLevel(plant: Plant): number {
-  // Calcola frazione di acqua in base ai giorni trascorsi
   const lastWateredDate = new Date(plant.lastWatered || plant.createdAt || Date.now());
-  const daysPassed = (Date.now() - lastWateredDate.getTime()) / (1000 * 60 * 60 * 24); // frazione di giorno
+  const daysPassed = (Date.now() - lastWateredDate.getTime()) / (1000 * 60 * 60 * 24);
   const level = 1 - daysPassed / plant.wateringDays;
-  return Math.max(0, Math.min(1, level)); // sempre tra 0 e 1
+  return Math.max(0, Math.min(1, level));
+}
+
+// Calcola livello acqua considerando anche il meteo (per piante esterne)
+export function getWaterLevelWithWeather(plant: Plant, weather: Weather | null): number {
+  const lastWateredDate = new Date(plant.lastWatered || plant.createdAt || Date.now());
+  const daysPassed = (Date.now() - lastWateredDate.getTime()) / (1000 * 60 * 60 * 24);
+  
+  // Calcola i giorni effettivi considerando il meteo
+  const effectiveDays = weather ? calculateAdjustedWateringDays(plant, weather) : plant.wateringDays;
+  
+  const level = 1 - daysPassed / effectiveDays;
+  return Math.max(0, Math.min(1, level));
 }
 
 export function calculateAdjustedWateringDays(plant: Plant, weather: Weather): number {
@@ -48,41 +60,69 @@ export function calculateAdjustedWateringDays(plant: Plant, weather: Weather): n
 
 export function updateHealthBasedOnWeather(plant: Plant, weather: Weather): Plant {
   let health = plant.health;
-  const waterLevel = getWaterLevel(plant);
+  const waterLevel = getWaterLevelWithWeather(plant, weather);
 
-  // Penalità salute SOLO quando l'acqua è a zero
+  // === GESTIONE SALUTE BASATA SUL LIVELLO D'ACQUA ===
+  
+  // Penalità progressiva quando l'acqua scende sotto certi livelli
   if (waterLevel === 0) {
-    health -= 15; // Penalità significativa quando non c'è acqua
+    // Acqua a zero: danno grave
+    health -= 8;
+  } else if (waterLevel < 0.1) {
+    // Acqua critica: danno significativo
+    health -= 5;
+  } else if (waterLevel < 0.2) {
+    // Acqua molto bassa: danno moderato
+    health -= 3;
+  } else if (waterLevel < 0.3) {
+    // Acqua bassa: danno leggero
+    health -= 1;
   }
 
+  // Recupero naturale quando l'acqua è in range ottimale (30-80%)
+  if (waterLevel >= 0.3 && waterLevel <= 0.8 && health < 100) {
+    health += 0.5; // Recupero lento ma costante
+  }
+
+  // === EFFETTI METEO PER PIANTE ESTERNE ===
+  const isOutdoor = plant.position?.toLowerCase().includes("esterno");
+  
   // Bonus pioggia naturale per piante esterne
-  if (weather.precipitation > 5 && plant.position?.toLowerCase().includes("esterno")) {
-    health = Math.min(100, health + 2); // piccolo bonus proporzionale
+  if (weather.precipitation > 5 && isOutdoor) {
+    health = Math.min(100, health + 1);
   }
 
   // Penalità/bonus temperatura e umidità solo se preferences definite e pianta esterna
-  if (plant.preferences && plant.position?.toLowerCase().includes("esterno")) {
+  if (plant.preferences && isOutdoor) {
     const { minTemp, maxTemp, minHumidity, maxHumidity } = plant.preferences;
 
     // Temperatura troppo alta
     if (weather.temp > maxTemp) {
       const tempExcess = weather.temp - maxTemp;
-      health -= Math.min(health, tempExcess * 0.5 * (waterLevel < 0.5 ? 2 : 1));
+      // Danno maggiore se anche l'acqua è bassa
+      const multiplier = waterLevel < 0.3 ? 2 : 1;
+      health -= Math.min(10, tempExcess * 0.3 * multiplier);
     }
     // Temperatura troppo bassa
     else if (weather.temp < minTemp) {
       const tempDeficit = minTemp - weather.temp;
-      health -= Math.min(health, tempDeficit * 0.3);
+      health -= Math.min(8, tempDeficit * 0.2);
     }
 
-    // Bonus se temperatura ottimale e acqua buona
-    if (weather.temp >= minTemp && weather.temp <= maxTemp && waterLevel >= 0.5 && waterLevel <= 0.9) {
-      health = Math.min(100, health + 1); // piccolo recupero graduale
+    // Bonus se tutto è ottimale
+    if (weather.temp >= minTemp && weather.temp <= maxTemp && 
+        waterLevel >= 0.4 && waterLevel <= 0.8 && 
+        health < 100) {
+      health += 1; // Recupero graduale in condizioni perfette
     }
 
-    // Umidità fuori range
-    if (weather.humidity < minHumidity && waterLevel < 0.3) health -= 2;
-    if (weather.humidity > maxHumidity && waterLevel > 0.8) health -= 2;
+    // Umidità fuori range amplifica i problemi
+    if (weather.humidity < minHumidity && waterLevel < 0.3) {
+      health -= 1.5;
+    }
+    if (weather.humidity > maxHumidity && waterLevel > 0.85) {
+      health -= 1; // Rischio marciume
+    }
   }
 
   return {
@@ -146,26 +186,26 @@ export function getHealthBgColor(health: number): string {
 }
 
 export function shouldWater(plant: Plant, weather: Weather | null): boolean {
-  const waterLevel = getWaterLevel(plant);
+  const waterLevel = getWaterLevelWithWeather(plant, weather);
   
-  // Urgenza base
-  if (waterLevel < 0.1) return true;
+  // Urgenza base in base al livello d'acqua
+  if (waterLevel <= 0.15) return true;
   
   // Solo per piante da esterno: considera meteo
   const isOutdoor = plant.position?.toLowerCase().includes("esterno");
   if (weather && plant.preferences && isOutdoor) {
     // Con caldo eccessivo, anticipa l'annaffiatura
-    if (weather.temp > plant.preferences.maxTemp && waterLevel < 0.2) {
+    if (weather.temp > plant.preferences.maxTemp && waterLevel < 0.25) {
       return true;
     }
     
-    // Con pioggia recente, può aspettare
-    if (weather.precipitation > 2 && waterLevel > 0.15) {
+    // Con pioggia recente abbondante, può aspettare
+    if (weather.precipitation > 5 && waterLevel > 0.2) {
       return false;
     }
   }
   
-  return waterLevel < 0.1;
+  return waterLevel <= 0.15;
 }
 
 export function getDaysAlive(plant: Plant): number {

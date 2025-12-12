@@ -1,7 +1,7 @@
 import { Plant, Weather } from "@/types/plant";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { getWaterLevel, getHealthColor, shouldWater } from "@/lib/plantLogic";
+import { getWaterLevelWithWeather, getHealthColor, shouldWater } from "@/lib/plantLogic";
 import { Droplets, Heart, Users } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { PlantWithOwner } from "@/hooks/usePlants";
@@ -13,7 +13,7 @@ interface PlantCardProps {
 }
 
 export function PlantCard({ plant, weather, onClick }: PlantCardProps) {
-  const waterLevel = getWaterLevel(plant);
+  const waterLevel = getWaterLevelWithWeather(plant, weather);
   const needsWater = shouldWater(plant, weather);
 
   return (

@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   getWaterLevel,
+  getWaterLevelWithWeather,
   getHealthColor,
   getHealthBgColor,
   waterPlant,
@@ -56,8 +57,8 @@ export function PlantDetail({
     setLocalPlant(plant);
   }, [plant]);
 
-  // Ricalcola i valori quando localPlant o weather cambiano
-  const waterLevel = useMemo(() => getWaterLevel(localPlant), [localPlant]);
+  // Ricalcola i valori quando localPlant o weather cambiano - USA IL METEO
+  const waterLevel = useMemo(() => getWaterLevelWithWeather(localPlant, weather), [localPlant, weather]);
 const daysSinceWatered = useMemo(() => {
   if (!localPlant.lastWatered) return null; // nessuna annaffiatura mai registrata
   const lastWateredDate = new Date(localPlant.lastWatered).getTime();

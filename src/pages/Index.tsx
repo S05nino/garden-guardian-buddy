@@ -498,7 +498,7 @@ const Index = () => {
                 )}
                 {user ? "Profilo & Info — Garden Buddy" : "Informazioni & Guida — Garden Buddy"}
               </DialogTitle>
-              <div className="text-xs text-muted-foreground">v4.3.2</div>
+              <div className="text-xs text-muted-foreground">v4.3.3</div>
             </div>
           </DialogHeader>
 
@@ -723,7 +723,7 @@ const Index = () => {
                     </>
                   ) : (
                     <>
-                      <h4 className="font-semibold text-lg mb-2">🚀 Novità della versione 4.0</h4>
+                      <h4 className="font-semibold text-lg mb-2">🚀 Novità della versione 4</h4>
                       <ul className="space-y-3 text-sm text-muted-foreground">
                         <li>
                           👥 <strong>Sistema Buddies</strong> —  

@@ -61,68 +61,82 @@ export function calculateAdjustedWateringDays(plant: Plant, weather: Weather): n
 export function updateHealthBasedOnWeather(plant: Plant, weather: Weather): Plant {
   let health = plant.health;
   const waterLevel = getWaterLevelWithWeather(plant, weather);
+  
+  // Fattore di sensibilità: piante che richiedono più acqua (wateringDays basso) 
+  // sono più sensibili alla mancanza d'acqua
+  const sensitivityFactor = Math.max(0.5, 3 / plant.wateringDays); // Da 0.5x a 3x
+  
+  const isOutdoor = plant.position?.toLowerCase().includes("esterno");
 
   // === GESTIONE SALUTE BASATA SUL LIVELLO D'ACQUA ===
   
-  // Penalità progressiva quando l'acqua scende sotto certi livelli
   if (waterLevel === 0) {
-    // Acqua a zero: danno grave
-    health -= 8;
+    // Acqua a zero: danno grave proporzionale alla sensibilità della pianta
+    const baseDamage = 8;
+    health -= baseDamage * sensitivityFactor;
   } else if (waterLevel < 0.1) {
     // Acqua critica: danno significativo
-    health -= 5;
+    health -= 5 * sensitivityFactor;
   } else if (waterLevel < 0.2) {
     // Acqua molto bassa: danno moderato
-    health -= 3;
+    health -= 3 * sensitivityFactor;
   } else if (waterLevel < 0.3) {
     // Acqua bassa: danno leggero
-    health -= 1;
+    health -= 1 * sensitivityFactor;
   }
 
-  // Recupero naturale quando l'acqua è in range ottimale (30-80%)
-  if (waterLevel >= 0.3 && waterLevel <= 0.8 && health < 100) {
-    health += 0.5; // Recupero lento ma costante
-  }
-
-  // === EFFETTI METEO PER PIANTE ESTERNE ===
-  const isOutdoor = plant.position?.toLowerCase().includes("esterno");
-  
-  // Bonus pioggia naturale per piante esterne
-  if (weather.precipitation > 5 && isOutdoor) {
-    health = Math.min(100, health + 1);
-  }
-
-  // Penalità/bonus temperatura e umidità solo se preferences definite e pianta esterna
-  if (plant.preferences && isOutdoor) {
-    const { minTemp, maxTemp, minHumidity, maxHumidity } = plant.preferences;
-
-    // Temperatura troppo alta
+  // === EFFETTI TEMPERATURA (anche con acqua presente) ===
+  if (plant.preferences) {
+    const { minTemp, maxTemp } = plant.preferences;
+    
+    // Penalità caldo eccessivo - più grave se anche l'acqua è bassa
     if (weather.temp > maxTemp) {
       const tempExcess = weather.temp - maxTemp;
-      // Danno maggiore se anche l'acqua è bassa
-      const multiplier = waterLevel < 0.3 ? 2 : 1;
-      health -= Math.min(10, tempExcess * 0.3 * multiplier);
+      const waterStressMultiplier = waterLevel < 0.3 ? 2.5 : waterLevel < 0.5 ? 1.5 : 1;
+      
+      // Danno proporzionale all'eccesso di temperatura
+      // Solo piante esterne subiscono il pieno effetto del meteo
+      const outdoorMultiplier = isOutdoor ? 1 : 0.3;
+      health -= Math.min(12, tempExcess * 0.4 * waterStressMultiplier * outdoorMultiplier);
     }
-    // Temperatura troppo bassa
-    else if (weather.temp < minTemp) {
+    
+    // Penalità freddo eccessivo
+    if (weather.temp < minTemp) {
       const tempDeficit = minTemp - weather.temp;
-      health -= Math.min(8, tempDeficit * 0.2);
+      const outdoorMultiplier = isOutdoor ? 1 : 0.2;
+      health -= Math.min(10, tempDeficit * 0.3 * outdoorMultiplier);
     }
-
-    // Bonus se tutto è ottimale
-    if (weather.temp >= minTemp && weather.temp <= maxTemp && 
-        waterLevel >= 0.4 && waterLevel <= 0.8 && 
-        health < 100) {
-      health += 1; // Recupero graduale in condizioni perfette
-    }
-
+    
     // Umidità fuori range amplifica i problemi
+    const { minHumidity, maxHumidity } = plant.preferences;
     if (weather.humidity < minHumidity && waterLevel < 0.3) {
-      health -= 1.5;
+      // Ambiente secco + poca acqua = stress elevato
+      health -= 2 * sensitivityFactor;
     }
     if (weather.humidity > maxHumidity && waterLevel > 0.85) {
-      health -= 1; // Rischio marciume
+      // Troppa umidità + troppa acqua = rischio marciume
+      health -= 1.5;
     }
+  }
+
+  // === RECUPERO NATURALE ===
+  // Recupero quando le condizioni sono buone
+  const hasGoodWater = waterLevel >= 0.3 && waterLevel <= 0.8;
+  const hasGoodTemp = plant.preferences 
+    ? weather.temp >= plant.preferences.minTemp && weather.temp <= plant.preferences.maxTemp
+    : weather.temp >= 15 && weather.temp <= 28;
+  
+  if (hasGoodWater && hasGoodTemp && health < 100) {
+    // Recupero lento ma costante in condizioni ottimali
+    health += 0.8;
+  } else if (hasGoodWater && health < 100) {
+    // Recupero minimo anche solo con acqua buona
+    health += 0.3;
+  }
+
+  // Bonus pioggia naturale per piante esterne con buona salute base
+  if (weather.precipitation > 5 && isOutdoor && health > 30) {
+    health = Math.min(100, health + 1);
   }
 
   return {

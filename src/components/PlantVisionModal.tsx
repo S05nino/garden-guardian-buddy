@@ -175,6 +175,49 @@ export function PlantVisionModal({ open, onClose, mode: propMode, onAddPlant, pl
     return "other";
   };
 
+  const translatePosition = (position: string): string => {
+    if (!position) return "Posizione sconosciuta";
+    const p = position.toLowerCase().trim();
+
+    // Mappa posizioni inglesi -> italiano
+    const positionMap: Record<string, string> = {
+      "indoor": "Interno",
+      "outdoor": "Esterno",
+      "partial_sun": "Mezz'ombra",
+      "partial sun": "Mezz'ombra",
+      "full_sun": "Pieno sole",
+      "full sun": "Pieno sole",
+      "shade": "Ombra",
+      "full_shade": "Ombra piena",
+      "full shade": "Ombra piena",
+      "bright_indirect": "Luce indiretta luminosa",
+      "bright indirect": "Luce indiretta luminosa",
+      "low_light": "Poca luce",
+      "low light": "Poca luce",
+      "balcony": "Balcone",
+      "terrace": "Terrazzo",
+      "garden": "Giardino",
+      "windowsill": "Davanzale",
+      "bathroom": "Bagno",
+      "kitchen": "Cucina",
+      "living_room": "Soggiorno",
+      "living room": "Soggiorno",
+      "bedroom": "Camera da letto",
+      "office": "Ufficio",
+    };
+
+    // Cerca corrispondenza esatta
+    if (positionMap[p]) return positionMap[p];
+
+    // Cerca corrispondenza parziale
+    for (const [eng, ita] of Object.entries(positionMap)) {
+      if (p.includes(eng)) return ita;
+    }
+
+    // Se già in italiano o non trovato, ritorna capitalizzato
+    return position.charAt(0).toUpperCase() + position.slice(1).replace(/_/g, ' ');
+  };
+
   const getCategoryIcon = (category: string): string => {
     switch (category) {
       case "herbs": return "🌿";
@@ -193,6 +236,7 @@ export function PlantVisionModal({ open, onClose, mode: propMode, onAddPlant, pl
 
     if (result && onAddPlant) {
       const normalizedCategory = normalizeCategory(result.category);
+      const translatedPosition = translatePosition(result.position);
 
       // 🔹 Forza wateringDays a minimo 1
       const safeWateringDays = Math.max(result.wateringDays || 1, 1);
@@ -201,7 +245,7 @@ export function PlantVisionModal({ open, onClose, mode: propMode, onAddPlant, pl
         name: result.name,
         description: result.description,
         category: normalizedCategory,
-        position: result.position,
+        position: translatedPosition,
         wateringDays: safeWateringDays,
         preferences: result.preferences,
         icon: getCategoryIcon(normalizedCategory),
@@ -361,7 +405,7 @@ export function PlantVisionModal({ open, onClose, mode: propMode, onAddPlant, pl
                       <div className="grid grid-cols-2 gap-3 text-sm">
                         <div>
                           <p className="text-muted-foreground">Posizione</p>
-                          <p className="font-medium">{result.position}</p>
+                          <p className="font-medium">{translatePosition(result.position)}</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Annaffiatura</p>
